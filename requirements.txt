@@ -1,0 +1,8 @@
+# Core dependencies
+# Add your project dependencies here, e.g.:
+# requests>=2.31.0
+# pyyaml>=6.0
+
+# Development dependencies (optional, use requirements-dev.txt for a full dev setup)
+# pytest>=7.0.0
+# pytest-cov>=4.0.0

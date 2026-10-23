@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>场馆排期 · 数智化后流程图与报价单</title>
+<style>
+:root{
+  --bg:#f4f6f8; --card:#fff; --ink:#151b22; --muted:#5b6876; --faint:#8b96a3;
+  --line:#e3e7ec; --line2:#eef1f4;
+  --blue:#2563eb; --amber:#c2760a; --green:#0f7a5a; --red:#c33a35; --purple:#6d4aa8; --teal:#2b7d78;
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);
+  font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1600px;margin:0 auto;padding:26px 22px 70px}
+
+.page-head{margin-bottom:16px}
+.crumb{font-size:11.5px;letter-spacing:.06em;color:var(--faint);text-transform:uppercase;margin-bottom:6px}
+h1{font-size:23px;line-height:1.3;margin:0 0 8px;letter-spacing:-.01em}
+.sub{font-size:13px;color:var(--muted);line-height:1.7;max-width:900px;margin:0}
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.mchip{font-size:11.5px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px;display:inline-flex;align-items:center;gap:6px}
+.mchip i{width:6px;height:6px;border-radius:50%;background:var(--blue);display:inline-block}
+.mchip.warn i{background:var(--red)}
+.mchip.money{background:#1e2a38;color:#fff;border-color:#1e2a38;font-weight:600}
+.mchip.money i{background:#8fd0a8}
+
+/* toolbar */
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 10px}
+.btn{font-size:12px;font-family:inherit;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;transition:.15s}
+.btn:hover{color:var(--ink);border-color:#cfd6de;background:#fbfcfd}
+.hint{font-size:11.5px;color:var(--faint);margin-left:auto}
+
+/* canvas */
+.canvas-wrap{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:auto;position:relative}
+.canvas{position:relative;width:1880px;height:1216px;transform-origin:top left}
+.lane-bg{position:absolute;left:0;right:0;border-bottom:1px dashed var(--line2)}
+.lane-bg.alt{background:#fafbfc}
+.col-sep{position:absolute;top:76px;bottom:24px;width:0;border-left:1px dashed #eceff3}
+.lane-head{position:absolute;left:0;width:170px;padding:14px 12px 0 16px;cursor:pointer;border-right:1px solid var(--line2)}
+.lane-head:hover{background:#f7fafc}
+.lane-head .nm{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:7px}
+.lane-head .nm i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.lane-head .rl{font-size:10.5px;color:var(--muted);margin-top:3px}
+.lane-head .fc{font-size:10px;color:var(--faint);margin-top:3px;line-height:1.45}
+.lane-head .ct{font-size:9.5px;color:#fff;border-radius:999px;padding:1px 6px;margin-left:auto;background:#b9c2cc}
+.col-head{position:absolute;top:24px;height:44px;padding:0 4px 0 0}
+.col-head .ch{display:flex;align-items:baseline;gap:7px;padding-bottom:6px;border-bottom:2px solid #e6eaee}
+.col-head .cn{font-size:15px;font-weight:700;color:#c3cad2;line-height:1}
+.col-head .ct2{font-size:13px;font-weight:700}
+.col-head .cs{font-size:10px;color:var(--faint);margin-top:3px;padding-left:23px}
+
+/* node */
+.nodewrap{position:absolute;cursor:pointer;transition:opacity .2s;z-index:2}
+.nodewrap svg{display:block;overflow:visible}
+.nodewrap .shp{transition:stroke-width .12s}
+.nodewrap:hover{z-index:7}
+.nodewrap:hover .shp{stroke-width:2.3}
+.nodewrap .ntxt{position:absolute;left:0;top:0;width:100%;display:flex;align-items:center;justify-content:center;
+  text-align:center;font-size:11px;font-weight:650;line-height:1.26;letter-spacing:-.005em;color:#182230;
+  padding:0 20px;pointer-events:none}
+.nodewrap.dia .ntxt{padding:0 44px;font-size:10.5px;line-height:1.24}
+.nodewrap .cap{position:absolute;left:0;bottom:0;width:100%;text-align:center;font-size:10px;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.nodewrap .cap b{color:#182230;font-weight:700;margin-right:3px}
+.nodewrap .badge{position:absolute;left:50%;top:-9px;transform:translateX(-50%);background:#fff;border:1px solid var(--line);
+  border-radius:999px;font-size:9px;padding:0 6px;line-height:14px;color:#33404e;white-space:nowrap;z-index:3}
+.nodewrap .badge.ai{background:#eef5ff;border-color:#bcd4f5;color:#1c4f9c}
+.nodewrap .badge.priv{background:#f3f0fa;border-color:#d6cbe9;color:#5b3f93}
+.nodewrap .badge.irr{background:#fdf1f0;border-color:#efc9c5;color:#a03a33}
+.nodewrap.dim{opacity:.14}
+.nodewrap.hot .shp{stroke:#12202e;stroke-width:2.6}
+
+.pill{position:absolute;height:30px;border:1px dashed #dfa19d;background:#fff7f6;border-radius:6px;padding:3px 7px;
+  font-size:9.5px;line-height:1.28;color:#8f3630;overflow:hidden;cursor:pointer;transition:opacity .2s}
+.pill b{font-weight:700}
+.pill.dim{opacity:.14}
+.pill.hot{box-shadow:0 0 0 2px rgba(195,58,53,.7)}
+
+svg.edges{position:absolute;left:0;top:0;pointer-events:none;z-index:1}
+.elabel{font-size:10px;fill:#5b6876}
+.elabel-bg{fill:#fff;fill-opacity:.94}
+
+/* legend */
+.legend{display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:12px 16px;background:#fff;border:1px solid var(--line);border-radius:12px;margin-top:12px;font-size:11.5px;color:var(--muted)}
+.lg{display:flex;align-items:center;gap:7px}
+.lg svg{width:30px;height:19px;flex:none}
+.lg .ln{width:22px;height:0;border-top:1.6px solid #9aa7b4}
+.lg .ln.d{border-top-style:dashed;border-color:#dfa19d}
+
+/* sections */
+section.block{margin-top:32px}
+.shead{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.shead h2{font-size:16px;margin:0;letter-spacing:-.01em}
+.shead span{font-size:11.5px;color:var(--faint)}
+
+/* 三卡 */
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.pc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px 16px;border-top:3px solid var(--blue)}
+.pc h3{font-size:14px;margin:0 0 3px;display:flex;align-items:center;gap:7px}
+.pc .kq{font-size:11px;color:var(--faint);margin-bottom:10px}
+.pc ul{margin:0;padding-left:15px;font-size:11.5px;line-height:1.72;color:#33404e}
+.pc li{margin:3px 0}
+.pc li b{color:#111}
+.pc .res{margin-top:11px;padding-top:10px;border-top:1px dashed var(--line);font-size:11px;color:#1f5136;background:#f4faf6;border-radius:6px;padding:9px 10px}
+
+/* 数字条 */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+.kpi .n{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.kpi .l{font-size:10.5px;color:var(--faint);margin-top:3px;line-height:1.5}
+
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:11.5px}
+th{text-align:left;font-weight:600;color:var(--muted);background:#f8fafb;padding:9px 12px;font-size:10.5px;letter-spacing:.04em;border-bottom:1px solid var(--line)}
+td{padding:9px 12px;border-bottom:1px solid var(--line2);color:#33404e;line-height:1.55;vertical-align:top}
+tr:last-child td{border-bottom:none}
+td b{font-weight:600;color:var(--ink)}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.sum td{background:#f8fafb;font-weight:700;color:var(--ink)}
+.tag{display:inline-block;font-size:10px;border-radius:4px;padding:1px 5px;margin:1px 3px 1px 0;background:#f1f4f8;color:#4a5b6b;white-space:nowrap}
+.tag.g{background:#eef7f3;color:#0f6b50}
+.tag.r{background:#fdf0ef;color:#9c3730}
+.tag.b{background:#eff4fd;color:#2554b8}
+.tag.a{background:#fdf6e9;color:#8d5a08}
+.ev{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10px;color:#7a8694}
+
+/* 报价单 */
+.quote{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 24px;box-shadow:var(--shadow)}
+.qhead{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-bottom:2px solid #1e2a38;padding-bottom:14px;margin-bottom:16px}
+.qhead h2{font-size:18px;margin:0 0 4px}
+.qhead .qid{font-size:11px;color:var(--faint);line-height:1.7}
+.qhead .qseller{text-align:right;font-size:11px;color:var(--muted);line-height:1.7}
+.qgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.qcell{background:#f8fafb;border-radius:8px;padding:9px 11px}
+.qcell .qk{font-size:9.5px;color:var(--faint);letter-spacing:.05em}
+.qcell .qv{font-size:12px;font-weight:600;margin-top:3px}
+.qsel{margin:18px 0 8px;font-size:12px;color:var(--muted)}
+.qsel b{color:var(--ink)}
+.total{display:flex;justify-content:flex-end;gap:26px;align-items:baseline;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.total .tl{font-size:11.5px;color:var(--faint)}
+.total .tv{font-size:24px;font-weight:700;letter-spacing:-.02em;color:#1e2a38}
+.total .tv small{font-size:12px;font-weight:500;color:var(--muted);margin-left:4px}
+.note{font-size:10.5px;color:var(--faint);line-height:1.7;margin-top:12px}
+.terms{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:20px}
+.terms h4{font-size:11px;letter-spacing:.06em;color:var(--faint);margin:0 0 6px;text-transform:uppercase}
+.terms ul{margin:0;padding-left:15px;font-size:11.5px;line-height:1.75;color:#33404e}
+
+.foot{margin-top:28px;font-size:11px;color:var(--faint);line-height:1.8;border-top:1px solid var(--line);padding-top:14px}
+
+/* drawer */
+.drawer{position:fixed;top:0;right:0;height:100vh;width:420px;background:#fff;border-left:1px solid var(--line);
+  box-shadow:-16px 0 48px rgba(16,24,40,.13);transform:translateX(102%);transition:transform .28s cubic-bezier(.22,.61,.36,1);
+  z-index:50;display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.dh{padding:18px 20px 12px;border-bottom:1px solid var(--line2);position:relative}
+.dh .k{font-size:10px;letter-spacing:.07em;color:var(--faint);text-transform:uppercase}
+.dh h3{font-size:16px;margin:6px 0 8px;line-height:1.35;padding-right:24px}
+.dh .who{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dh .who i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dclose{position:absolute;right:14px;top:14px;border:none;background:#f1f4f8;border-radius:7px;width:26px;height:26px;cursor:pointer;color:var(--muted);font-size:14px;line-height:1}
+.db{padding:16px 20px 28px;overflow:auto;flex:1;font-size:12px;line-height:1.68}
+.db .brief{font-size:12.5px;color:#33404e;background:#f8fafb;border-left:3px solid #cfd8e3;padding:8px 11px;border-radius:0 7px 7px 0;margin-bottom:14px}
+.db h4{font-size:10px;letter-spacing:.07em;color:var(--faint);margin:16px 0 5px;text-transform:uppercase}
+.db ul{margin:0;padding-left:15px;color:#33404e}
+.db li{margin:2px 0}
+.db .guard{background:#f1f8f4;border:1px solid #c9e6d6;color:#1f5136;border-radius:8px;padding:9px 11px;font-size:11.5px;line-height:1.6}
+.db .nav{display:flex;justify-content:space-between;gap:8px;margin-top:22px;border-top:1px solid var(--line2);padding-top:14px}
+.db .nav button{flex:1}
+
+@media (max-width:1100px){.cards{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.qgrid{grid-template-columns:repeat(2,1fr)}.terms{grid-template-columns:1fr}}
+@media print{
+  @page{size:A3 landscape;margin:6mm}
+  .toolbar,.drawer{display:none!important}
+  .canvas-wrap{box-shadow:none;border:none;overflow:visible}
+  .wrap{max-width:none;padding:0}
+}
+body.export{background:#fff}
+body.export .wrap{max-width:none;padding:10px}
+body.export .page-head,body.export .toolbar,body.export .legend,
+body.export section.block:not(.flowsec),body.export .foot{display:none!important}
+body.export .canvas-wrap{border:none;box-shadow:none;overflow:visible;background:#fff}
+body.export .canvas{zoom:1!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="page-head">
+    <div class="crumb">FDE 需求定义 → 方案设计 · 数智化后流程与商务报价</div>
+    <h1>场馆排期与需求变更 · AI 数智化方案与报价单</h1>
+    <p class="sub">现状流程的瓶颈不在自动化缺失，而在<b>交接点的人工作业</b>：三类工具没有统一编号、排期表与邮件不同步、每单 35 分钟逐项核对。
+      这份方案不加新系统、不做写回，只在现有工具上加一层<b>只读关联 + 提示 + 人工确认留痕</b>，并且明确回答三件事：<b>钱和时间花在哪、人在哪里必须签字、隐私边界怎么守</b>。</p>
+    <div class="meta">
+      <span class="mchip"><i></i>19 个处理步骤 · 6 个角色</span>
+      <span class="mchip"><i></i>5 个人工确认门</span>
+      <span class="mchip"><i></i>AI 只提示不写回</span>
+      <span class="mchip money"><i></i>功能点计价 · ¥61,800</span>
+      <span class="mchip warn"><i></i>演练报价 · 非商务承诺</span>
+    </div>
+  </div>
+
+  <!-- 1 三个硬约束 -->
+  <section class="block" style="margin-top:22px">
+    <div class="shead"><h2>三个硬约束怎么破</h2><span>费钱费时间 / 人工审核 / 数据隐私，各自的解法与代价</span></div>
+    <div class="cards">
+      <div class="pc" style="border-top-color:#2563eb">
+        <h3>① 费钱费时间</h3>
+        <div class="kq">不新建系统，只加一层只读关联层</div>
+        <ul>
+          <li><b>零系统改造</b>：复用服务台、台账、文件库三处现有工具，AI 只做只读关联与提示，写回接口全程关闭（f32）</li>
+          <li><b>一个批次试点</b>：四周交付、两名骨干、每周投入不超过四小时，先证明价值再谈推广（f03）</li>
+          <li><b>单点切入</b>：只做「缺项清单 + 冲突提示 + 复核留痕」三件事，不做全流程平台</li>
+          <li><b>复用不重建</b>：统一编号挂在原台账上，不改表结构（REQ-2 需先拍板）</li>
+        </ul>
+        <div class="res">代价：35 分钟/单 → 目标 10 分钟复核（试点验证值，非承诺）；省的是核对工时，不是人头</div>
+      </div>
+      <div class="pc" style="border-top-color:#0f7a5a">
+        <h3>② 人工审核</h3>
+        <div class="kq">不是去掉人，是把「逐项找」变成「逐条判」</div>
+        <ul>
+          <li><b>5 个必须签字的门</b>：目标口径、当班核对、授权校验、占档确认、合同确认</li>
+          <li><b>建议不覆盖原值</b>：AI 结论只作提示，原值保留、改动留痕（f14）</li>
+          <li><b>不自动改状态</b>：系统不得把申请置为已批准、不写业务系统（f41）</li>
+          <li><b>抽检与复盘</b>：每周抽单复核，误报漏报进周复盘，模型不自己判自己对（f55）</li>
+        </ul>
+        <div class="res">代价：人工确认点不减少，只把核对时间从「找答案」挪到「判答案」</div>
+      </div>
+      <div class="pc" style="border-top-color:#6d4aa8">
+        <h3>③ 数据隐私</h3>
+        <div class="kq">最小可见、只读、可审计</div>
+        <ul>
+          <li><b>字段级脱敏</b>：客户名称、合同金额等按字段授权，默认不显示（f32/f41）</li>
+          <li><b>跨企业资料按授权范围</b>：授权清单由客户方出具，用途写进授权书（f41）</li>
+          <li><b>三不</b>：不留副本、不训练模型、不出客户环境；日志可追溯到人（f45）</li>
+          <li><b>先定规则再上线</b>：保留期限与删除触发人须书面确认（f43 / REQ-5）</li>
+        </ul>
+        <div class="res">代价：脱敏字段口径与授权清单由客户方一轮会议确认，否则不上线</div>
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="n">4 周</div><div class="l">试点交付周期（f03）<br>第 5 周进入 30 样本回放</div></div>
+      <div class="kpi"><div class="n">10 分钟</div><div class="l">单均复核目标<br>现状逐项核对 35 分钟（f12）</div></div>
+      <div class="kpi"><div class="n">5 个</div><div class="l">人工确认门<br>全部保留，不因 AI 取消</div></div>
+      <div class="kpi"><div class="n">0 写回</div><div class="l">不写业务系统、不自动改状态<br>只读接口（f32）</div></div>
+    </div>
+  </section>
+
+  <!-- 2 数智化后流程图 -->
+  <section class="block flowsec">
+    <div class="shead"><h2>数智化后的现状流程（To-Be 泳道图）</h2><span>蓝色 AI 节点只做关联与提示，绿色双线框是人必须签字的地方</span></div>
+    <div class="toolbar">
+      <button class="btn" id="zoomOut">−</button>
+      <button class="btn" id="zoomFit">适应宽度</button>
+      <button class="btn" id="zoomIn">+</button>
+      <button class="btn" id="resetFocus">显示全部角色</button>
+      <span class="hint">点击节点看：输入 / 输出 / AI 做了什么 / 人保留了什么 / 证据编号</span>
+    </div>
+    <div class="canvas-wrap" id="wrap"><div class="canvas" id="canvas"><svg class="edges" id="edges"></svg></div></div>
+    <div class="legend">
+      <span class="lg"><svg viewBox="0 0 30 19"><rect x="1" y="3" width="28" height="13" rx="3" fill="#fff" stroke="#2563eb" stroke-width="1.6"/></svg>矩形＝人工执行</span>
+      <span class="lg"><svg viewBox="0 0 30 19"><rect x="1" y="3" width="28" height="13" rx="2" fill="#f3f8ff" stroke="#2b6cb0" stroke-width="1.6"/><line x1="6" y1="6" x2="6" y2="13" stroke="#2b6cb0" stroke-width="1"/><line x1="9" y1="6" x2="9" y2="13" stroke="#2b6cb0" stroke-width="1"/></svg>蓝底双竖线＝AI / 系统自动</span>
+      <span class="lg"><svg viewBox="0 0 30 19"><polygon points="15,2 29,9.5 15,17 1,9.5" fill="#fffdf6" stroke="#c2760a" stroke-width="1.6"/></svg>菱形＝判断</span>
+      <span class="lg"><svg viewBox="0 0 30 19"><rect x="1" y="3" width="28" height="13" rx="2" fill="#fff" stroke="#0f7a5a" stroke-width="1.6"/><rect x="4" y="6" width="22" height="7" rx="1" fill="none" stroke="#0f7a5a" stroke-width=".9" opacity=".6"/></svg>双线矩形＝人工确认</span>
+      <span class="lg"><svg viewBox="0 0 30 19"><rect x="1.5" y="3" width="27" height="13" rx="2" fill="#fffafa" stroke="#c33a35" stroke-width="2.2"/></svg>粗红边＝不可逆</span>
+      <span class="lg"><svg viewBox="0 0 30 19"><rect x="1" y="4" width="28" height="11" rx="5.5" fill="#f7fcfb" stroke="#2b7d78" stroke-width="1.6"/></svg>胶囊＝触发</span>
+      <span class="lg"><svg viewBox="0 0 30 19"><path d="M1 4 H29 V14 q-7 6 -14 0 q-7 -6 -14 1 Z" fill="#f7fcfb" stroke="#2b7d78" stroke-width="1.6"/></svg>文档形＝对外输出</span>
+      <span class="lg"><span class="ln d"></span>异常出口（转人工 / 不写回）</span>
+      <span class="lg"><b style="color:#1c4f9c">AI</b>　<b style="color:#5b3f93">🔒</b> 隐私门</span>
+    </div>
+  </section>
+
+  <!-- 3 对照表 -->
+  <section class="block">
+    <div class="shead"><h2>现状 → 数智化后：每一个环节改了什么、谁仍然签字</h2><span>只改交接点，不改业务规则</span></div>
+    <table id="cmpTable">
+      <thead><tr><th style="width:120px">环节</th><th style="width:230px">现状做法</th><th style="width:260px">数智化后</th><th style="width:110px">谁仍签字</th><th>降本 / 风险点</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- 4 计价方式 -->
+  <section class="block">
+    <div class="shead"><h2>计价方式选型：为什么用「功能点 / 规模」</h2><span>五种方式逐一对照本项目的可测条件</span></div>
+    <table id="priceTable">
+      <thead><tr><th style="width:170px">计价方式</th><th style="width:300px">适配条件</th><th style="width:290px">放到本项目会怎样</th><th>结论</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="note" style="margin-top:10px">结论：本项目<b>范围可枚举、但口径仍有 5 项待确认</b>，因此用功能点计价锁定范围，用变更单承接新增功能；
+      同时提供「基础费 + 效果浮动」作为可选条款，把验收风险与客户共担。</div>
+  </section>
+
+  <!-- 5 报价单 -->
+  <section class="block">
+    <div class="shead"><h2>报价单</h2><span>按功能点计价 · 试点包</span></div>
+    <div class="quote">
+      <div class="qhead">
+        <div>
+          <h2>场馆排期需求变更辅助 · 试点建设报价单</h2>
+          <div class="qid">报价编号：FDE-DH-VS-2026-01　|　版本：V1.0　|　日期：2026-10-23<br>有效期：30 个自然日　|　币种：人民币（含税）</div>
+        </div>
+        <div class="qseller">
+          致：上海东浩会展经营有限公司（演练场景）<br>
+          项目：场馆排期与需求变更　|　范围：单场馆 · 一个批次<br>
+          计价方式：<b style="color:#1e2a38">功能点 / 规模</b>
+        </div>
+      </div>
+
+      <div class="qgrid">
+        <div class="qcell"><div class="qk">交付周期</div><div class="qv">4 周（试点）</div></div>
+        <div class="qcell"><div class="qk">功能点总量</div><div class="qv">44 FP</div></div>
+        <div class="qcell"><div class="qk">功能点单价</div><div class="qv">¥1,200 / FP</div></div>
+        <div class="qcell"><div class="qk">验收口径</div><div class="qv">30 样本回放</div></div>
+      </div>
+
+      <div class="qsel"><b>一、功能点计价明细</b>（单价 ¥1,200/FP，试点优惠价，标准价 ¥1,600/FP）</div>
+      <table id="fpTable">
+        <thead><tr><th style="width:46px">序号</th><th style="width:210px">功能模块</th><th>可枚举功能范围</th><th style="width:64px" class="num">功能点</th><th style="width:90px" class="num">单价</th><th style="width:96px" class="num">金额</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="qsel" style="margin-top:16px"><b>二、实施与验收服务</b>（一次性，随功能点包同签）</div>
+      <table id="svcTable">
+        <thead><tr><th style="width:210px">服务项</th><th>内容与交付物</th><th style="width:96px" class="num">金额</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="total">
+        <span class="tl">功能点小计 ¥52,800　+　实施服务 ¥9,000</span>
+        <span class="tv">¥61,800<small>含税</small></span>
+      </div>
+
+      <div class="qsel" style="margin-top:18px"><b>三、付款节点</b>（与里程碑绑定，未达标不进入下一节点）</div>
+      <table id="payTable">
+        <thead><tr><th style="width:150px">节点</th><th style="width:260px">触发条件</th><th style="width:80px" class="num">比例</th><th style="width:110px" class="num">金额</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="terms">
+        <div>
+          <h4>可选条款（二选一，不选则按基础报价执行）</h4>
+          <ul>
+            <li><b>效果浮动</b>：基础费 ¥52,800 + 达标奖励 ¥8,000。达标＝30/30 已标注冲突被识别且说明原因、复核 100% 留痕、返工次数下降 ≥30%</li>
+            <li><b>未达标返还</b>：若 30 样本回放未通过，返还实施服务费的 50%（¥4,500），并免费修复一轮后复测</li>
+            <li><b>运维订阅（可选）</b>：¥12,000/年，8×5 响应、月度复盘支持、版本小更新；不订阅不影响已交付功能使用</li>
+            <li><b>扩展报价</b>：新增场馆或申请类型按增量功能点 × ¥1,200/FP 计，不重收实施费</li>
+          </ul>
+        </div>
+        <div>
+          <h4>不含项与前提</h4>
+          <ul>
+            <li>不含硬件、网络、第三方接口授权费与等保测评</li>
+            <li>不含客户方业务、审核、IT 人员的工时投入</li>
+            <li>历史数据清洗按 30 样本为界，超出部分另计</li>
+            <li>不做业务系统改造、不做写回与自动审批</li>
+            <li>前置条件：统一编号口径、版本判定阈值、样本与签字人、授权清单、保留期限五项须书面确认，否则顺延工期</li>
+          </ul>
+        </div>
+      </div>
+      <div class="note">
+        本报价为<b>演练场景下的示范报价</b>，用于方法训练与商务结构化表达，不构成真实商务承诺；单价与功能点数量需按实际调研结果复核。
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 ROI -->
+  <section class="block">
+    <div class="shead"><h2>这笔钱怎么回来（两个口径）</h2><span>先用可测的工时基线，再谈风险成本</span></div>
+    <table id="roiTable">
+      <thead><tr><th style="width:200px">口径</th><th style="width:280px">测算方式</th><th style="width:150px" class="num">月/年价值</th><th>说明</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="note" style="margin-top:10px">
+      <b>回本判断</b>：仅按可测人力，回收期约 21 个月，不足以单独支撑立项；叠加「一次重大档期冲突」的处置成本后，试点期内即可回本。
+      因此试点验收必须同时记录<b>返工次数、版本正确率、确认完整率</b>三项，而不是只看省了多少分钟——否则第二年的续费与推广没有依据。
+    </div>
+  </section>
+
+  <div class="foot">
+    口径说明：本方案与报价基于合成访谈材料（6 位虚构角色、36/36 覆盖），人物、指标与金额均为演练设定，不代表上海东浩会展经营有限公司真实业务与商务条件。
+    证据编号对应 <span class="ev">discovery-report.md</span> 中的 <span class="ev">dlg-venue-schedule-fNN</span>；
+    「35 分钟/单」「45 单/月」为报告中的模拟基线（f12），「10 分钟复核」为试点目标值，需以 30 样本回放结果验证。
+  </div>
+</div>
+
+<div class="drawer" id="drawer">
+  <div class="dh">
+    <div class="k" id="dKind">—</div>
+    <h3 id="dTitle">—</h3>
+    <div class="who"><i id="dDot"></i><span id="dWho">—</span></div>
+    <button class="dclose" id="dClose">✕</button>
+  </div>
+  <div class="db" id="dBody"></div>
+</div>
+
+<script>
+/* ============ 角色 ============ */
+const ROLES = {
+  r0:{name:'顾明岚', role:'业务负责人', focus:'业务价值、决策与试点范围', color:'#3f6d54'},
+  r1:{name:'林亦舟', role:'一线服务专员', focus:'现场操作与异常处理', color:'#3c6f8f'},
+  r2:{name:'唐映秋', role:'项目流程协调员', focus:'流程交接与资料责任', color:'#a86a4e'},
+  r3:{name:'秦芮', role:'数字化工程师', focus:'系统数据与集成条件', color:'#8a7a2e'},
+  r4:{name:'傅景', role:'审核与质量负责人', focus:'风险、权限、留存与审计', color:'#7a5a8f'},
+  r5:{name:'叶书', role:'客户协同代表', focus:'客户体验与协作反馈', color:'#2b7d78'}
+};
+const LANE_ORDER = ['r0','r1','r2','r3','r4','r5'];
+
+const COLS = [
+  {k:'A', no:'①', title:'意向询期', sub:'触发 → 统一编号 → 三源归集 → 目标口径', color:'#8fa3b8'},
+  {k:'B', no:'②', title:'占档确认', sub:'冲突检测 → 人工核对 → 版本判定 → 占档', color:'#6f8fa8'},
+  {k:'C', no:'③', title:'合同审核', sub:'变更补件 → 隐私授权 → 交接单 → 正式确认', color:'#a08a6a'},
+  {k:'D', no:'④', title:'进撤场计划', sub:'排布定稿 → 双时间戳 → 当班核对 → 交付', color:'#7a9a86'},
+  {k:'E', no:'⑤', title:'运营复盘', sub:'指标看板 → 审计追溯 → 下一轮', color:'#9a86ab'}
+];
+
+/* ============ 数智化后节点 ============ */
+const NODES = [
+{id:'t01', no:1, lane:'r1', col:'A', kind:'event', tag:'触发', title:'接收询期需求（自动建单）',
+ brief:'客户邮件或群里一句话，系统按统一编号自动建单，不再靠人记。',
+ input:['客户询期邮件 / 群消息','场地分区图、变更单（f21）'],
+ output:['带唯一编号的申请单'],
+ tool:['邮件/群 → 自动建单器'],
+ fail:['仍可能出现“先群里说、后补单”，需双时间戳兜底（f13）'],
+ ev:['f13','f21','f30'], badge:'', badgeCls:''},
+
+{id:'t02', no:2, lane:'r5', col:'A', kind:'decision', tag:'判断', title:'客户与运营目标是否对齐？',
+ brief:'AI 把双方诉求并排列出来，但“以谁为准”必须由人定。',
+ input:['客户诉求（延长使用时间）','运营恢复与检查要求'],
+ output:['目标差异清单（结构化字段，可挂到申请单）'],
+ tool:['对话输入 + 模板'],
+ fail:['不对齐就进流程，后面每个交接点都在互相拖（f50）'],
+ ev:['f50','f53'], badge:'人工定口径', badgeCls:''},
+
+{id:'t03', no:3, lane:'r2', col:'A', kind:'activity', tag:'执行', title:'建单登记 + 统一关联编号',
+ brief:'三处工具回填同一个编号，这是整条链路能不能串起来的前提。',
+ input:['申请单','客户 / 场馆 / 分区'],
+ output:['唯一编号','服务台、台账、文件库同号'],
+ tool:['服务台 + 台账 + 文件库'],
+ fail:['编号口径未拍板前，只能先做映射表，不改表结构（REQ-2）'],
+ ev:['f30','f20'], badge:'前置：编号口径', badgeCls:''},
+
+{id:'t04', no:4, lane:'r3', col:'A', kind:'system', tag:'AI 只读', title:'三源只读归集 + 数据血缘',
+ brief:'把三处记录按编号拼成一笔完整申请，每个字段都能点回来源位置。',
+ input:['服务台工单','业务台账','文件库档期表'],
+ output:['关联记录集','字段级来源位置（可点击回溯）'],
+ tool:['只读导出 + 关联引擎（f32）'],
+ fail:['重复编号、空时间、版本断链、单位差异仍会出现，只是现在看得见（f33）'],
+ ev:['f31','f32','f33'], badge:'AI · 只读', badgeCls:'ai'},
+
+{id:'t05', no:5, lane:'r3', col:'B', kind:'system', tag:'AI 检测', title:'冲突 / 重叠候选检测',
+ brief:'时间窗、装卸口、进撤场时长一起算，给出候选冲突、依据和置信度，不给结论。',
+ input:['关联记录集','时间窗、装卸口、进撤场时长（f31）'],
+ output:['冲突候选清单 + 证据链 + 置信度'],
+ tool:['规则 + 模型（只读）'],
+ fail:['装卸口重叠这类跨活动冲突，规则覆盖不到就会漏（f11）'],
+ ev:['f10','f11','f12'], badge:'AI · 给候选', badgeCls:'ai',
+ exc:{text:'置信度低 / 来源缺失 → 进人工队列，不出结论', ev:'f44'}},
+
+{id:'t06', no:6, lane:'r1', col:'B', kind:'confirm', tag:'人工确认', title:'核对缺项清单与冲突提示',
+ brief:'一页清单 + 来源位置，人逐条判；判定结果和依据一起留痕，原值不动。',
+ input:['冲突候选 + 依据','一页缺项清单 + 来源位置'],
+ output:['确认 / 驳回结果','复核记录（谁、何时、依据）'],
+ tool:['当班工位（建议不覆盖原值 f14）'],
+ fail:['缺项字段与判定标准未定，清单就会变成新的争议点（REQ-1）'],
+ ev:['f14','f15','f12'], badge:'人工确认门 ①', badgeCls:''},
+
+{id:'t07', no:7, lane:'r2', col:'B', kind:'system', tag:'AI 判定', title:'版本与确认状态判定',
+ brief:'有效期 + 确认状态双条件，作废留原因，不靠文件名猜最新版。',
+ input:['版本号、有效期','确认状态、作废原因'],
+ output:['唯一有效版本','未确认项清单'],
+ tool:['版本链 + 确认链（f24）'],
+ fail:['阈值与裁决人未定时，只能给「疑似过期」而不能自动替换（REQ-4）'],
+ ev:['f23','f24','f25'], badge:'AI · 双条件', badgeCls:'ai'},
+
+{id:'t08', no:8, lane:'r0', col:'B', kind:'irreversible', tag:'不可逆', title:'占档确认与对外口径',
+ brief:'只提示冲突，不锁档、不签约、不承诺容量；对外一句话仍由业务人员说。',
+ input:['冲突结论','有效版本 + 未确认项','试点边界（一个批次 f05）'],
+ output:['占档结论（内部）','对外口径（业务人员确认）'],
+ tool:['审批在系统外'],
+ fail:['AI 越界替业务承诺，是最贵的错误（f05/f52）'],
+ ev:['f00','f04','f05','f52'], badge:'🛡 不可逆', badgeCls:'irr'},
+
+{id:'t09', no:9, lane:'r1', col:'C', kind:'activity', tag:'执行', title:'变更 / 补件提交',
+ brief:'客户改了需求，一线直接提变更，系统自动带出受影响对象与缺项。',
+ input:['客户变更单','自动带出的缺项与影响范围'],
+ output:['变更登记（含发生节点、受影响对象）'],
+ tool:['服务台 + 变更单'],
+ fail:['回填时间≠发生时间，必须写两个时间戳（f13/f34）'],
+ ev:['f13','f22','f34'], badge:''},
+
+{id:'t10', no:10, lane:'r4', col:'C', kind:'decision', tag:'判断', title:'授权与隐私校验',
+ brief:'字段级脱敏 + 授权范围 + 用途，三项对不上就拒绝，拒绝原因也要留。',
+ input:['授权清单与用途','字段敏感级、跨企业范围'],
+ output:['通过 / 拒绝·补件·转人工','授权留痕（谁批、批了哪些字段）'],
+ tool:['权限矩阵 + 脱敏规则（f41）'],
+ fail:['授权清单未出具前，只能跑脱敏样本，不能碰真实客户数据（REQ-5）'],
+ ev:['f40','f41','f43'], badge:'🔒 隐私门', badgeCls:'priv',
+ exc:{text:'授权不足 / 跨企业未授权 → 拒绝并留原因，转人工', ev:'f41'}},
+
+{id:'t11', no:11, lane:'r2', col:'C', kind:'system', tag:'AI 生成', title:'交接清单自动生成',
+ brief:'接收人、版本、未确认项、截止时间四项缺一不可，签收才转移责任。',
+ input:['有效版本','未确认项与截止时间','接收人'],
+ output:['交接单（四项齐全）','签收记录'],
+ tool:['模板 + 必填校验'],
+ fail:['“签收即转移”未成文前，交接单只是记录，不是责任依据（REQ-3）'],
+ ev:['f20','f23','f25'], badge:'AI · 生成', badgeCls:'ai'},
+
+{id:'t12', no:12, lane:'r0', col:'C', kind:'irreversible', tag:'不可逆', title:'合同正式确认',
+ brief:'对外生效的一步，只能由授权人员签，系统没有审批权。',
+ input:['交接单','授权结论','合同条款'],
+ output:['确认结论（授权人签署）'],
+ tool:['合同/审批系统（系统外）'],
+ fail:['让模型替业务拍板，等于把合同风险交给算法（f22）'],
+ ev:['f22','f41'], badge:'🛡 不可逆', badgeCls:'irr'},
+
+{id:'t13', no:13, lane:'r2', col:'D', kind:'activity', tag:'执行', title:'进撤场排布定稿',
+ brief:'AI 建议时段和装卸口，人看着现场定稿；建议只是草稿。',
+ input:['AI 排布建议','场地分区、作业约束'],
+ output:['进撤场排布表（人工定稿）'],
+ tool:['排期表 + 分区图'],
+ fail:['同一装卸口进撤场重叠仍要靠样本回放验证是否漏报（f11）'],
+ ev:['f11','f31'], badge:'人工定稿', badgeCls:''},
+
+{id:'t14', no:14, lane:'r3', col:'D', kind:'system', tag:'AI 校验', title:'双时间戳 + 快照 + 过期告警',
+ brief:'业务发生时间和系统接收时间都记；读取失败留快照并标记，绝不编造状态。',
+ input:['业务发生时间','系统接收时间、来源版本'],
+ output:['双时间戳记录','过期告警 / 快照 + 时间标记'],
+ tool:['写入层 + 快照（f34/f35）'],
+ fail:['阈值未定时，只能告警不能自动覆盖（REQ-4）'],
+ ev:['f34','f35'], badge:'AI · 校验', badgeCls:'ai'},
+
+{id:'t15', no:15, lane:'r1', col:'D', kind:'confirm', tag:'人工确认', title:'当班核对关键字段',
+ brief:'系统建议逐条判：采纳/驳回/改值三选一，改值必须填原因，原值保留。',
+ input:['双时间戳记录','缺项清单 + 来源位置'],
+ output:['已确认结果','复核留痕（改值原因）'],
+ tool:['当班工位'],
+ fail:['一键采纳的诱惑最大，必须把“改值要填原因”做成硬约束（f14）'],
+ ev:['f14','f15'], badge:'人工确认门 ②', badgeCls:''},
+
+{id:'t16', no:16, lane:'r5', col:'D', kind:'event', tag:'对外', title:'交付客户与投诉登记',
+ brief:'AI 生成口径说明草稿，人确认后再发；投诉先登记原始问题、版本与恢复需求。',
+ input:['已确认结果与版本','客户反馈'],
+ output:['客户答复（人确认）','投诉登记'],
+ tool:['客服/邮件 + 模板'],
+ fail:['用模型推测客户意图对外解释，会把小问题放大（f54）'],
+ ev:['f52','f53','f54'], badge:'人确认后发出', badgeCls:''},
+
+{id:'t17', no:17, lane:'r5', col:'E', kind:'system', tag:'AI 看板', title:'周复盘看板',
+ brief:'工时、返工、版本正确率、确认完整率自动汇总；误报漏报单独列。',
+ input:['复核记录','投诉登记','拒绝/转人工记录'],
+ output:['周指标看板','误报漏报清单 → 改进项'],
+ tool:['指标看板（f51）'],
+ fail:['只修模板不核对效果，指标不降就不能结束试点（f55）'],
+ ev:['f51','f55'], badge:'AI · 看板', badgeCls:'ai'},
+
+{id:'t18', no:18, lane:'r4', col:'E', kind:'control', tag:'审计', title:'审计追溯',
+ brief:'一键回答：谁查过、用哪个版本、提了什么建议、谁确认、改了什么。',
+ input:['访问日志','版本、建议、确认人、改值原因'],
+ output:['追溯报告 + 保留/删除记录'],
+ tool:['访问日志'],
+ fail:['只留最终摘要就追溯不到过程，审计会直接判不通过（f45）'],
+ ev:['f43','f45'], badge:'审计门', badgeCls:''},
+
+{id:'t19', no:19, lane:'r0', col:'E', kind:'decision', tag:'决策', title:'下一轮范围决策',
+ brief:'继续、停止、扩大三选一；质量侧保留停止权，业务侧不能单方面扩大。',
+ input:['看板 + 审计结论','30 样本回放结果（f02/f42）'],
+ output:['继续 / 停止 / 扩大范围'],
+ tool:['试点评审'],
+ fail:['越权扩大范围是最常见失败方式（f04/f44）'],
+ ev:['f02','f04','f42','f44'], badge:''}
+];
+
+const EDGES = [
+  {from:'t01', to:'t02', label:'诉求待澄清'},
+  {from:'t02', to:'t03', label:'交接 · 目标口径'},
+  {from:'t03', to:'t04', label:'统一编号'},
+  {from:'t04', to:'t05', label:'关联记录集'},
+  {from:'t05', to:'t06', label:'候选 + 依据'},
+  {from:'t06', to:'t07', label:'人工判定结果'},
+  {from:'t07', to:'t08', label:'有效版本 + 未确认项'},
+  {from:'t08', to:'t09', label:'占档结论（不锁档）'},
+  {from:'t09', to:'t10', label:'变更登记'},
+  {from:'t10', to:'t11', label:'授权结论'},
+  {from:'t11', to:'t12', label:'交接单（四项齐全）'},
+  {from:'t12', to:'t13', label:'合同确认'},
+  {from:'t13', to:'t14', label:'排布定稿'},
+  {from:'t14', to:'t15', label:'双时间戳 + 告警'},
+  {from:'t15', to:'t16', label:'复核记录'},
+  {from:'t16', to:'t17', label:'投诉 / 误报'},
+  {from:'t17', to:'t18', label:'复盘清单'},
+  {from:'t18', to:'t19', label:'审计结论'}
+];
+
+/* ============ 几何与渲染（与现状图同一套引擎） ============ */
+const HEADER_W=170, COL_W=306, COL_GAP=36, RIGHT_PAD=36;
+const LANES_TOP=76, LANE_H=196;
+const NODE_L_OFF=34, NODE_W=COL_W-68;
+const NODE_CY_OFF=86, CAP_TOP=140, PILL_TOP=160;
+const SH={rect:76, diamond:98, terminator:54, doc:82};
+const CANVAS_W = HEADER_W + COLS.length*COL_W + (COLS.length-1)*COL_GAP + RIGHT_PAD;
+const CANVAS_H = LANES_TOP + LANE_ORDER.length*LANE_H + 24;
+
+function colLeft(i){ return HEADER_W + i*(COL_W+COL_GAP); }
+function laneTop(i){ return LANES_TOP + i*LANE_H; }
+const COL_INDEX = {}; COLS.forEach((c,i)=>COL_INDEX[c.k]=i);
+const LANE_INDEX = {}; LANE_ORDER.forEach((r,i)=>LANE_INDEX[r]=i);
+
+function shapeOf(n){
+  if(n.kind==='decision') return 'diamond';
+  if(n.kind==='event') return n.id==='t16' ? 'doc' : 'terminator';
+  return 'rect';
+}
+
+function shapeMarkup(n,w,h){
+  const k=n.kind, s=shapeOf(n);
+  if(s==='diamond')
+    return '<polygon class="shp" points="'+(w/2)+',1 '+(w-1)+','+(h/2)+' '+(w/2)+','+(h-1)+' 1,'+(h/2)+'" fill="#fffdf6" stroke="#c2760a" stroke-width="1.7"/>';
+  if(s==='terminator')
+    return '<rect class="shp" x="1" y="1" width="'+(w-2)+'" height="'+(h-2)+'" rx="'+(h/2-1)+'" fill="#f7fcfb" stroke="#2b7d78" stroke-width="1.7"/>';
+  if(s==='doc'){
+    const b=h-13;
+    return '<path class="shp" d="M1 1 H'+(w-1)+' V'+b+' q'+(-w/4)+' 13 '+(-w/2)+' 0 q'+(-w/4)+' -13 '+(-w/2)+
+      ' 0 Z" fill="#f7fcfb" stroke="#2b7d78" stroke-width="1.7"/>';
+  }
+  if(k==='irreversible')
+    return '<rect class="shp" x="1.5" y="1.5" width="'+(w-3)+'" height="'+(h-3)+'" rx="3" fill="#fffafa" stroke="#c33a35" stroke-width="2.3"/>';
+  if(k==='confirm')
+    return '<rect class="shp" x="1" y="1" width="'+(w-2)+'" height="'+(h-2)+'" rx="3" fill="#fff" stroke="#0f7a5a" stroke-width="1.7"/>'+
+      '<rect x="5.5" y="5.5" width="'+(w-11)+'" height="'+(h-11)+'" rx="1.5" fill="none" stroke="#0f7a5a" stroke-width=".9" opacity=".5"/>';
+  if(k==='system')
+    return '<rect class="shp" x="1" y="1" width="'+(w-2)+'" height="'+(h-2)+'" rx="3" fill="#f3f8ff" stroke="#2b6cb0" stroke-width="1.7"/>'+
+      '<line x1="11" y1="9" x2="11" y2="'+(h-9)+'" stroke="#2b6cb0" stroke-width="1" opacity=".55"/>'+
+      '<line x1="15" y1="9" x2="15" y2="'+(h-9)+'" stroke="#2b6cb0" stroke-width="1" opacity=".55"/>';
+  if(k==='control')
+    return '<rect class="shp" x="1" y="1" width="'+(w-2)+'" height="'+(h-2)+'" rx="3" fill="#fbfcfe" stroke="#4a5b7a" stroke-width="1.7"/>';
+  return '<rect class="shp" x="1" y="1" width="'+(w-2)+'" height="'+(h-2)+'" rx="3" fill="#ffffff" stroke="#2563eb" stroke-width="1.7"/>';
+}
+
+const canvas=document.getElementById('canvas'), svg=document.getElementById('edges');
+function el(tag,cls,style){const d=document.createElement(tag);if(cls)d.className=cls;if(style)Object.assign(d.style,style);return d;}
+
+function build(){
+  canvas.style.width=CANVAS_W+'px'; canvas.style.height=CANVAS_H+'px';
+
+  COLS.forEach((c,i)=>{
+    if(i>0) canvas.appendChild(el('div','col-sep',{left:(colLeft(i)-COL_GAP/2)+'px'}));
+    const h=el('div','col-head',{left:colLeft(i)+'px',width:COL_W+'px'});
+    h.innerHTML='<div class="ch" style="border-bottom-color:'+c.color+'"><span class="cn">'+c.no+'</span>'+
+      '<span class="ct2">'+c.title+'</span></div><div class="cs">'+c.sub+'</div>';
+    canvas.appendChild(h);
+  });
+
+  LANE_ORDER.forEach((rid,i)=>{
+    const top=laneTop(i);
+    canvas.appendChild(el('div','lane-bg'+(i%2?' alt':''),{top:top+'px',height:LANE_H+'px'}));
+    const r=ROLES[rid], cnt=NODES.filter(n=>n.lane===rid).length;
+    const h=el('div','lane-head',{top:top+'px',height:LANE_H+'px'});
+    h.dataset.role=rid;
+    h.innerHTML='<div class="nm"><i style="background:'+r.color+'"></i>'+r.name+'<span class="ct">'+cnt+'</span></div>'+
+      '<div class="rl">'+r.role+'</div><div class="fc">'+r.focus+'</div>';
+    canvas.appendChild(h);
+  });
+
+  const box={};
+  NODES.forEach(n=>{
+    const ci=COL_INDEX[n.col], li=LANE_INDEX[n.lane];
+    const l=colLeft(ci)+NODE_L_OFF, w=NODE_W, h=SH[shapeOf(n)];
+    const cy=laneTop(li)+NODE_CY_OFF, top=cy-h/2;
+    box[n.id]={l:l,r:l+w,cx:l+w/2,cy:cy,top:top,bottom:cy+h/2,h:h};
+
+    const wrapBottom=laneTop(li)+CAP_TOP+15;
+    const d=el('div','nodewrap'+(shapeOf(n)==='diamond'?' dia':''),
+      {left:l+'px',top:top+'px',width:w+'px',height:(wrapBottom-top)+'px'});
+    d.dataset.id=n.id; d.dataset.lane=n.lane;
+    const r=ROLES[n.lane];
+    d.innerHTML='<svg width="'+w+'" height="'+h+'">'+shapeMarkup(n,w,h)+'</svg>'+
+      '<div class="ntxt" style="height:'+h+'px'+(n.kind==='system'?';padding-left:30px':'')+'">'+n.title+'</div>'+
+      (n.badge?'<span class="badge '+(n.badgeCls||'')+'">'+n.badge+'</span>':'')+
+      '<div class="cap"><b>'+n.no+'</b>'+r.name+' · '+r.role+'</div>';
+    d.addEventListener('click',()=>openNode(n.id));
+    canvas.appendChild(d);
+
+    if(n.exc){
+      const pTop=laneTop(li)+PILL_TOP;
+      const p=el('div','pill',{left:(l+8)+'px',top:pTop+'px',width:(w-16)+'px'});
+      p.dataset.lane=n.lane;
+      p.innerHTML='<b>⚠ 异常出口</b> '+n.exc.text+' <span class="ev">'+n.exc.ev+'</span>';
+      p.addEventListener('click',()=>openNode(n.id));
+      canvas.appendChild(p);
+      canvas.appendChild(el('div','',{position:'absolute',left:(l+w/2)+'px',top:box[n.id].bottom+'px',
+        height:(pTop-box[n.id].bottom)+'px',borderLeft:'1px dashed #dfa19d',zIndex:'1'}));
+    }
+  });
+
+  const NS='http://www.w3.org/2000/svg';
+  svg.setAttribute('width',CANVAS_W); svg.setAttribute('height',CANVAS_H);
+  svg.innerHTML='<defs><marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">'+
+    '<path d="M0,1 L9,5 L0,9 z" fill="#93a1af"/></marker></defs>';
+
+  const edgeEls=[];
+  EDGES.forEach(e=>{
+    const s=box[e.from], t=box[e.to];
+    const ns=NODES.find(x=>x.id===e.from), nt=NODES.find(x=>x.id===e.to);
+    const pts=route(s,t,ns,nt);
+    const pth=document.createElementNS(NS,'path');
+    pth.setAttribute('d',roundPath(pts,9));
+    pth.setAttribute('fill','none'); pth.setAttribute('stroke','#93a1af');
+    pth.setAttribute('stroke-width','1.5'); pth.setAttribute('marker-end','url(#arw)');
+    svg.appendChild(pth);
+
+    let best=null;
+    for(let i=0;i<pts.length-1;i++){
+      const dx=Math.abs(pts[i+1][0]-pts[i][0]);
+      if(!best||dx>best.dx) best={dx:dx,i:i};
+    }
+    if(best && best.dx>46){
+      const a=pts[best.i], b=pts[best.i+1];
+      const mx=(a[0]+b[0])/2, my=a[1];
+      const g=document.createElementNS(NS,'g');
+      const rect=document.createElementNS(NS,'rect');
+      const tx=document.createElementNS(NS,'text');
+      tx.setAttribute('x',mx); tx.setAttribute('y',my-5);
+      tx.setAttribute('text-anchor','middle'); tx.setAttribute('class','elabel');
+      tx.textContent=e.label;
+      g.appendChild(tx);
+      let w=0; try{w=tx.getComputedTextLength();}catch(err){w=e.label.length*10;}
+      rect.setAttribute('x',mx-w/2-3); rect.setAttribute('y',my-15);
+      rect.setAttribute('width',w+6); rect.setAttribute('height',13);
+      rect.setAttribute('rx',2); rect.setAttribute('class','elabel-bg');
+      g.insertBefore(rect,tx);
+      svg.appendChild(g);
+    }
+    edgeEls.push({el:pth,from:e.from,to:e.to});
+  });
+  window.__edges=edgeEls;
+}
+
+function route(s,t,ns,nt){
+  const si=COL_INDEX[ns.col], ti=COL_INDEX[nt.col];
+  if(si<ti){
+    const gx=colLeft(si)+COL_W+COL_GAP/2;
+    const strip=laneTop(LANE_INDEX[nt.lane])+18;
+    const inX=t.l-16;
+    return [[s.r,s.cy],[gx,s.cy],[gx,strip],[inX,strip],[inX,t.cy],[t.l,t.cy]];
+  }
+  const diff=LANE_INDEX[nt.lane]-LANE_INDEX[ns.lane];
+  if(Math.abs(diff)===1){
+    const x = shapeOf(ns)==='diamond' ? s.cx : s.l+52;
+    if(diff>0){ const mid=(s.bottom+t.top)/2; return [[x,s.bottom],[x,mid],[t.cx,mid],[t.cx,t.top]]; }
+    const mid=(t.bottom+s.top)/2; return [[x,s.top],[x,mid],[t.cx,mid],[t.cx,t.bottom]];
+  }
+  const ch = diff<0 ? s.l-16 : s.r+16;
+  if(diff<0) return [[s.l,s.cy],[ch,s.cy],[ch,t.cy],[t.l,t.cy]];
+  return [[s.r,s.cy],[ch,s.cy],[ch,t.cy],[t.r,t.cy]];
+}
+
+function roundPath(pts,r){
+  let d='M '+pts[0][0]+' '+pts[0][1];
+  for(let i=1;i<pts.length-1;i++){
+    const p0=pts[i-1],p1=pts[i],p2=pts[i+1];
+    const v1=[p1[0]-p0[0],p1[1]-p0[1]], v2=[p2[0]-p1[0],p2[1]-p1[1]];
+    const l1=Math.hypot(v1[0],v1[1])||1, l2=Math.hypot(v2[0],v2[1])||1;
+    const rr=Math.min(r,l1/2,l2/2);
+    const a=[p1[0]-v1[0]/l1*rr,p1[1]-v1[1]/l1*rr], b=[p1[0]+v2[0]/l2*rr,p1[1]+v2[1]/l2*rr];
+    d+=' L '+a[0]+' '+a[1]+' Q '+p1[0]+' '+p1[1]+' '+b[0]+' '+b[1];
+  }
+  const last=pts[pts.length-1];
+  return d+' L '+last[0]+' '+last[1];
+}
+
+/* ============ 抽屉 ============ */
+const drawer=document.getElementById('drawer');
+const ORDER=NODES.map(n=>n.id);
+function list(arr){return '<ul>'+arr.map(x=>'<li>'+x+'</li>').join('')+'</ul>';}
+
+function openNode(id){
+  const n=NODES.find(x=>x.id===id); if(!n) return;
+  const r=ROLES[n.lane];
+  document.getElementById('dKind').textContent='步骤 '+n.no+' · '+n.tag+' · '+r.name+' 泳道';
+  document.getElementById('dTitle').textContent=n.title;
+  document.getElementById('dDot').style.background=r.color;
+  document.getElementById('dWho').textContent=r.name+' · '+r.role+'（'+r.focus+'）';
+
+  let h='<div class="brief">'+n.brief+'</div>';
+  h+='<h4>输入</h4>'+list(n.input);
+  h+='<h4>输出 / 产物</h4>'+list(n.output);
+  h+='<h4>工具与责任边界</h4>'+list(n.tool);
+  h+='<h4>仍会失败的地方</h4>'+list(n.fail);
+  if(n.exc) h+='<h4>异常出口（不写回）</h4><div class="guard">'+n.exc.text+'（'+n.exc.ev+'）</div>';
+  h+='<h4>证据编号</h4><div>'+n.ev.map(e=>'<span class="tag b ev">'+e+'</span>').join('')+'</div>';
+
+  const i=ORDER.indexOf(id);
+  h+='<div class="nav">'+
+     (i>0?'<button class="btn" data-go="'+ORDER[i-1]+'">← 上一步</button>':'<span></span>')+
+     (i<ORDER.length-1?'<button class="btn" data-go="'+ORDER[i+1]+'">下一步 →</button>':'<span></span>')+'</div>';
+  document.getElementById('dBody').innerHTML=h;
+  document.getElementById('dBody').scrollTop=0;
+  drawer.classList.add('open');
+  document.querySelectorAll('.nodewrap').forEach(x=>x.classList.toggle('hot',x.dataset.id===id));
+  document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>openNode(b.dataset.go)));
+}
+document.getElementById('dClose').addEventListener('click',()=>{
+  drawer.classList.remove('open');
+  document.querySelectorAll('.nodewrap').forEach(x=>x.classList.remove('hot'));
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.getElementById('dClose').click(); });
+
+/* ============ 聚焦 ============ */
+let focusRole=null;
+function setFocus(role){
+  focusRole=role;
+  document.querySelectorAll('.nodewrap').forEach(x=>{
+    if(!role){x.classList.remove('dim');return;}
+    x.classList.toggle('dim',x.dataset.lane!==role);
+  });
+  document.querySelectorAll('.pill').forEach(x=>{
+    if(!role){x.classList.remove('dim');return;}
+    x.classList.toggle('dim',x.dataset.lane!==role);
+  });
+  (window.__edges||[]).forEach(e=>{
+    if(!role){e.el.setAttribute('stroke','#93a1af');e.el.setAttribute('stroke-width','1.5');return;}
+    const on=NODES.find(n=>n.id===e.from).lane===role || NODES.find(n=>n.id===e.to).lane===role;
+    e.el.setAttribute('stroke',on?'#1e2a38':'#dfe4ea');
+    e.el.setAttribute('stroke-width',on?'2':'1');
+  });
+  document.querySelectorAll('.lane-head').forEach(h=>{
+    h.style.background=(role&&h.dataset.role===role)?'#f2f6fa':'';
+  });
+}
+document.querySelectorAll('.lane-head').forEach(h=>{
+  h.addEventListener('click',()=>setFocus(focusRole===h.dataset.role?null:h.dataset.role));
+});
+document.getElementById('resetFocus').addEventListener('click',()=>setFocus(null));
+
+/* ============ 缩放 ============ */
+let scale=1, auto=true;
+function applyScale(s){ scale=Math.max(.45,Math.min(1.25,s)); canvas.style.zoom=scale; }
+function fit(){ const w=document.getElementById('wrap').clientWidth-4; applyScale(Math.min(1,w/CANVAS_W)); }
+document.getElementById('zoomIn').addEventListener('click',()=>{auto=false;applyScale(scale+.08);});
+document.getElementById('zoomOut').addEventListener('click',()=>{auto=false;applyScale(scale-.08);});
+document.getElementById('zoomFit').addEventListener('click',()=>{auto=true;fit();});
+window.addEventListener('resize',()=>{ if(auto) fit(); });
+
+/* ============ 对照表 ============ */
+const CMP=[
+  ['意向询期','邮件/群消息散落，靠人记；三类工具各存一份','自动建单 + 统一编号，三处同号','唐映秋','编号口径须先拍板，否则只做映射不改表'],
+  ['冲突核对','逐项人工比对，35 分钟/单（f12）','AI 出候选 + 证据链 + 置信度，人逐条判','林亦舟','置信度低的必须进人工队列，不许自动下结论'],
+  ['缺项清单','长摘要、来源找不到，返工高（f15）','一页清单 + 可点击来源位置','林亦舟','缺项判定标准（REQ-1）未定前，清单只作参考'],
+  ['版本判定','靠文件名猜，版本分叉（f24）','有效期 + 确认状态双条件判定','唐映秋','阈值与裁决人未定，只能提示「疑似过期」'],
+  ['交接','只发“已处理”，责任说不清（f23）','交接单四项必填，签收即转移','唐映秋 / 顾明岚','「签收即转移」是否成文（REQ-3）'],
+  ['授权隐私','人工口头确认，跨企业界限模糊（f41）','字段级脱敏 + 授权清单 + 拒绝留痕','傅景','授权清单与保留期限须客户方出具（REQ-5）'],
+  ['时间口径','回填时间当发生时间（f13）','双时间戳 + 快照 + 过期告警','秦芮 / 林亦舟','告警阈值与新版确认权（REQ-4）'],
+  ['交付与复盘','只修模板，不看误报漏报（f55）','指标看板 + 周复盘 + 审计追溯','叶书 / 傅景','三项指标连续两周不降，试点不得扩大']
+];
+const PRICE=[
+  ['功能点 / 规模','范围可枚举、功能可标准化、单价可对齐行业基准','44 FP 可逐条勾对，报价透明；新增功能按变更单加，不用重谈整包','✅ 采用（主计价）'],
+  ['固定总价 / 整包','需求与交付范围已锁定，变更极少','本项目 5 项口径未核实，任何变更都会扯皮，供应商只能把风险折进总价','⛔ 不采用（风险溢价）'],
+  ['订阅 / 年费','售卖持续可用能力，客户长期续费','试点期还没有“持续能力”可订阅，第一年收年费等于让客户为不确定买单','⏸ 仅作上线后可选（¥12,000/年）'],
+  ['用量计费（Token/调用/任务环）','单量大、用量可预测，价值与调用量正相关','单馆 45 单/月，用量极小且与价值脱钩；按 Token 计费会变成“越核对越贵”','⛔ 不采用'],
+  ['效果付费 / 分成','结果可衡量、基线可测、归因清晰','验收口径已具备（30 样本、返工率、留痕率），但归因仍受旺季/人员影响','✅ 作为可选条款叠加（基础费 + ¥8,000 浮动）']
+];
+const FP=[
+  ['1','统一编号与三源只读关联','按编号合并服务台/台账/文件库记录；字段级来源回溯；断链标记',7],
+  ['2','缺项清单与来源定位','一页清单生成；缺项字段映射；点击跳转来源位置',5],
+  ['3','冲突 / 重叠候选检测','时间窗冲突；同一装卸口进撤场重叠；进出场时长校验；置信度与证据链',8],
+  ['4','版本与确认状态判定','有效期校验；确认状态校验；作废原因留痕；唯一有效版本输出',4],
+  ['5','双时间戳与快照兜底','业务时间/接收时间双写；读取失败快照；过期告警',3],
+  ['6','人工复核与留痕','逐条采纳/驳回/改值；改值必填原因；原值保留',4],
+  ['7','交接清单自动生成','接收人/版本/未确认项/截止时间四项必填校验；签收记录',3],
+  ['8','审计追溯查询','谁查过、哪个版本、谁确认、改了什么；报告导出',3],
+  ['9','字段级脱敏与授权控制','敏感字段分级；按角色可见；跨企业授权范围校验；拒绝留痕',4],
+  ['10','周复盘指标看板','工时、返工次数、版本正确率、确认完整率；误报漏报清单',3]
+];
+const SVC=[
+  ['流程固化与配置','现状流程图核对、字段映射表、规则配置清单',3600],
+  ['30 样本标注与验收','样本抽取、冲突标注、回放执行、验收报告',3600],
+  ['培训与交接','两场培训（一线/审核）、操作手册、交接清单',1800]
+];
+const PAY=[
+  ['T0 签约','合同生效、授权清单初稿提交',.3,18540],
+  ['T+2 周 试点上线','只读关联 + 缺项清单可用，进入内部试用',.4,24720],
+  ['T+4 周 验收','30 样本回放通过、复核留痕 100%',.2,12360],
+  ['T+5 周 交接','培训完成、运维手册移交',.1,6180]
+];
+const ROI=[
+  ['可测人力：核对工时','45 单/月 ×（35 − 10）分钟 = 18.8 小时/月','¥2,900 / 月','按 900 元/人天折算；35 分钟为报告基线（f12），10 分钟为目标值'],
+  ['可测人力：返工下降','45 单 ×（0.4 − 0.2）次 × 45 分钟 ≈ 6.8 小时/月','见上（合计 25.6 小时/月 ≈ 3.2 人天）','返工基线为假设值，须用 30 样本回放建立真实基线'],
+  ['风险成本：档期冲突处置','按季度 1 次重大冲突 × 3–5 万元（现场加班、吊装改期、客户补偿）','¥12,000 – 20,000 / 年','待验证假设，不作为报价依据，仅用于说明试点价值'],
+  ['审计与追溯成本','每次追溯从 2 小时降到 15 分钟，按季度 8 次计','≈ 12 小时/年','小幅但确定性高，主要用于满足质量侧验收']
+];
+
+function renderTables(){
+  document.querySelector('#cmpTable tbody').innerHTML=CMP.map(r=>
+    '<tr><td><b>'+r[0]+'</b></td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td style="color:#8f3630">'+r[4]+'</td></tr>').join('');
+
+  document.querySelector('#priceTable tbody').innerHTML=PRICE.map(r=>
+    '<tr><td><b>'+r[0]+'</b></td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td></tr>').join('');
+
+  document.querySelector('#fpTable tbody').innerHTML=FP.map(r=>
+    '<tr><td>'+r[0]+'</td><td><b>'+r[1]+'</b></td><td>'+r[2]+'</td><td class="num">'+r[3]+'</td>'+
+    '<td class="num">1,200</td><td class="num">'+(r[3]*1200).toLocaleString()+'</td></tr>').join('')+
+    '<tr class="sum"><td colspan="3">功能点合计</td><td class="num">44</td><td class="num">—</td><td class="num">52,800</td></tr>';
+
+  document.querySelector('#svcTable tbody').innerHTML=SVC.map(r=>
+    '<tr><td><b>'+r[0]+'</b></td><td>'+r[1]+'</td><td class="num">'+r[2].toLocaleString()+'</td></tr>').join('')+
+    '<tr class="sum"><td colspan="2">实施服务合计</td><td class="num">9,000</td></tr>';
+
+  document.querySelector('#payTable tbody').innerHTML=PAY.map(r=>
+    '<tr><td><b>'+r[0]+'</b></td><td>'+r[1]+'</td><td class="num">'+(r[2]*100)+'%</td><td class="num">'+r[3].toLocaleString()+'</td></tr>').join('')+
+    '<tr class="sum"><td colspan="2">合计</td><td class="num">100%</td><td class="num">61,800</td></tr>';
+
+  document.querySelector('#roiTable tbody').innerHTML=ROI.map(r=>
+    '<tr><td><b>'+r[0]+'</b></td><td>'+r[1]+'</td><td class="num">'+r[2]+'</td><td>'+r[3]+'</td></tr>').join('');
+}
+
+/* ============ init ============ */
+build();
+renderTables();
+
+const EXPORT=new URLSearchParams(location.search).get('export');
+if(EXPORT){ document.body.classList.add('export'); auto=false; applyScale(1); }
+else{ fit(); }
+</script>
+</body>
+</html>
