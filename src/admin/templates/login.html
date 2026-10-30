@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>登录 · 场馆档期排期智能体管理后台</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <h1>场馆档期排期智能体</h1>
+    <p class="muted" style="margin-bottom:18px;">管理后台登录 · 企业 SaaS</p>
+    <div id="err" class="alert alert-error" style="display:none;"></div>
+    <label>账号</label><input id="username" placeholder="admin / staff">
+    <label>密码</label><input id="password" type="password" placeholder="••••••">
+    <button class="btn btn-primary" style="width:100%;margin-top:18px;" onclick="doLogin()">登 录</button>
+    <p class="muted" style="margin-top:14px;">默认账号：admin/admin123（管理员）、staff/staff123（员工）</p>
+  </div>
+</div>
+<script>
+async function doLogin() {
+  const err = document.getElementById('err');
+  err.style.display = 'none';
+  try {
+    const data = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({
+      username: document.getElementById('username').value.trim(),
+      password: document.getElementById('password').value }) });
+    document.cookie = 'access_token=' + encodeURIComponent(data.token) + '; path=/; Max-Age=43200; SameSite=Lax';
+    location.href = '/chat';
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+</script>
+</body>
+</html>

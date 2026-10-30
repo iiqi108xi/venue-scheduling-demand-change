@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>场馆档期排期智能体 · 管理后台</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">场馆档期排期智能体<small>管理后台 · 仅输出冲突提示与缺项清单</small></div>
+    <nav>
+      <a href="/chat" class="{{ 'active' if active == 'chat' }}">档期问答</a>
+      <a href="/drafts" class="{{ 'active' if active == 'drafts' }}">档期草稿</a>
+      <a href="/chat/history" class="{{ 'active' if active == 'history' }}">我的问答记录</a>
+      {% if user.role == 'admin' %}
+      <a href="/admin/kb" class="{{ 'active' if active == 'kb' }}">知识库管理</a>
+      <a href="/admin/prompt" class="{{ 'active' if active == 'prompt' }}">提示词模板</a>
+      <a href="/admin/audit" class="{{ 'active' if active == 'audit' }}">对话审计</a>
+      <a href="/admin/users" class="{{ 'active' if active == 'users' }}">用户管理</a>
+      {% endif %}
+    </nav>
+    <div class="role-tag">当前用户：{{ user.username }}
+      <span class="badge badge-{{ user.role }}">{{ '管理员' if user.role == 'admin' else '一线员工' }}</span><br>
+      <a href="#" onclick="logout();return false;" style="color:#9ca3af;font-size:12px;">退出登录</a>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <div class="page-title">{{ page_title or '' }}</div>
+      <div class="user-info">所有业务结论需人工复核确认 · 系统不自动锁档/签约/承诺容量</div>
+    </div>
+    <div class="content">{% block content %}{% endblock %}</div>
+  </div>
+</div>
+<script>
+async function api(path, opts = {}) {
+  const resp = await fetch(path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
+  if (resp.status === 401) { location.href = '/login'; throw new Error('未登录'); }
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.detail || ('请求失败 ' + resp.status));
+  return data;
+}
+async function logout() {
+  await api('/api/auth/logout', { method: 'POST' });
+  document.cookie = 'access_token=; Max-Age=0; path=/';
+  location.href = '/login';
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+</script>
+</body>
+</html>

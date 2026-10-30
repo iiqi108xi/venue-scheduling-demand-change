@@ -65,3 +65,8 @@ Thumbs.db
 
 # 本地向量缓存
 .vector_cache.npz
+
+# 管理后台运行时数据（数据库/FAISS）
+src/admin/data/
+__pycache__/
+*.pyc

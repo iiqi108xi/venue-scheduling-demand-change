@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h3>我的问答记录（只读）</h3>
+  <table id="tbl"><thead><tr><th>会话</th><th>开始时间</th><th>操作</th></tr></thead><tbody></tbody></table>
+</div>
+<div class="card" id="detail" style="display:none;">
+  <h3 id="detailTitle">会话详情</h3>
+  <div id="detailBody"></div>
+</div>
+<script>
+async function load() {
+  const rows = await api('/api/chat/sessions');
+  document.querySelector('#tbl tbody').innerHTML = rows.map(s =>
+    `<tr><td>${esc(s.title)}</td><td>${s.created_at}</td>
+     <td><button class="btn btn-sm" onclick="openSession(${s.id})">查看</button></td></tr>`).join('');
+}
+async function openSession(id) {
+  const s = await api('/api/chat/sessions/' + id);
+  document.getElementById('detail').style.display = 'block';
+  document.getElementById('detailTitle').textContent = '会话详情 · ' + s.title;
+  document.getElementById('detailBody').innerHTML = s.messages.map(m => `
+    <div class="msg">
+      <span class="q">${esc(m.question)}</span>
+      <div class="a">${esc(m.llm_raw_answer)}</div>
+      <div class="meta">${m.created_at} · 提示词模板 v${m.prompt_template_version}
+        ${m.flag_type ? ' · <span class="badge badge-risk">疑似风险</span> ' + esc(m.flag_reason || '') : ''}</div>
+      <details><summary>召回的知识库片段</summary><pre>${esc(m.retrieved.map(r =>
+        `[来源] ${r.source}(v${r.doc_version})/切片#${r.chunk_no}\n${r.text}`).join('\n\n'))}</pre></details>
+    </div>`).join('') || '<p class="muted">无问答记录</p>';
+}
+load();
+</script>
+{% endblock %}

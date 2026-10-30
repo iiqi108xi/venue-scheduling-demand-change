@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h3>对话审计留痕（质量验收）</h3>
+  <div class="toolbar">
+    <input id="fUser" placeholder="员工账号" style="width:140px;">
+    <input id="fStart" placeholder="开始日期" style="width:120px;" onfocus="this.type='date'">
+    <input id="fEnd" placeholder="结束日期" style="width:120px;" onfocus="this.type='date'">
+    <select id="fFlag" style="width:130px;">
+      <option value="">全部状态</option><option value="risk">疑似风险</option><option value="normal">正常</option>
+    </select>
+    <button class="btn" onclick="load()">筛选</button>
+  </div>
+</div>
+<div class="card">
+  <table id="tbl"><thead><tr><th>时间</th><th>账号</th><th>提问摘要</th><th>状态</th><th>操作</th></tr></thead><tbody></tbody></table>
+</div>
+<div class="card" id="detail" style="display:none;">
+  <h3>完整溯源（不可只保留摘要）</h3>
+  <div id="detailBody"></div>
+</div>
+<script>
+const FLAGS = { conflict_misjudge: '排期冲突误判', overcommit: '越权承诺', invalid_rule: '违规口径' };
+async function load() {
+  const p = new URLSearchParams();
+  ['fUser:user', 'fStart:start', 'fEnd:end', 'fFlag:flag'].forEach(pv => {
+    const [el, key] = pv.split(':'); const v = document.getElementById(el).value.trim(); if (v) p.set(key, v);
+  });
+  const rows = await api('/api/admin/audit/sessions?' + p.toString());
+  document.querySelector('#tbl tbody').innerHTML = rows.map(m => `<tr>
+    <td>${m.created_at}</td><td>${esc(m.username)}</td><td>${esc(m.question)}</td>
+    <td>${m.flag_type ? `<span class="badge badge-risk">${FLAGS[m.flag_type]}</span>` : '<span class="muted">正常</span>'}</td>
+    <td class="toolbar">
+      <button class="btn btn-sm" onclick="full(${m.id})">溯源</button>
+      ${m.flag_type
+        ? `<button class="btn btn-sm" onclick="unflag(${m.id})">取消标记</button>`
+        : `<button class="btn btn-sm btn-danger" onclick="mark(${m.id})">标记风险</button>`}
+    </td></tr>`).join('') || '<tr><td colspan="5" class="muted">无记录</td></tr>';
+}
+async function full(id) {
+  const m = await api('/api/admin/audit/messages/' + id + '/full');
+  const d = document.getElementById('detail');
+  d.style.display = 'block';
+  d.querySelector('h3').textContent = `完整溯源 · 记录#${m.id} · ${m.username} · ${m.created_at}`;
+  d.querySelector('h3').dataset.mid = m.id;
+  const retrieved = m.retrieved.map(r =>
+    `[来源] ${r.source}(文档v${r.doc_version})/切片#${r.chunk_no}\n${r.text}`).join('\n\n');
+  document.getElementById('detailBody').innerHTML = `
+    <label>提问原文</label><pre style="background:#f5f6f8;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px;">${esc(m.question)}</pre>
+    <label>召回的知识库片段（含文档版本）</label><pre style="background:#f5f6f8;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px;">${esc(retrieved) || '（无召回）'}</pre>
+    <label>大模型原始回答全文</label><pre style="background:#f5f6f8;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px;">${esc(m.llm_raw_answer)}</pre>
+    <p class="muted">访问人：${esc(m.username)}　提示词模板版本：v${m.prompt_template_version}　记录时间：${m.created_at}
+    ${m.flag_type ? `<br>风险标记：${FLAGS[m.flag_type]} · 原因：${esc(m.flag_reason)} · 操作人：${esc(m.flagged_by)} · ${m.flagged_at}` : ''}</p>`;
+  d.scrollIntoView({ behavior: 'smooth' });
+}
+async function mark(id) {
+  const reason = prompt('标记原因（必填）：\n1=排期冲突误判 2=越权承诺 3=违规口径\n请输入类型编号与说明，格式：编号 空格 说明');
+  if (!reason) return;
+  const [num, ...rest] = reason.trim().split(/\s+/);
+  const types = { 1: 'conflict_misjudge', 2: 'overcommit', 3: 'invalid_rule' };
+  try {
+    await api('/api/admin/audit/messages/' + id + '/flag', { method: 'POST',
+      body: JSON.stringify({ flag_type: types[num] || num, reason: rest.join(' ') || '未填写' }) });
+    load();
+  } catch (e) { alert(e.message); }
+}
+async function unflag(id) {
+  await api('/api/admin/audit/messages/' + id + '/flag', { method: 'DELETE' });
+  load();
+}
+load();
+</script>
+{% endblock %}

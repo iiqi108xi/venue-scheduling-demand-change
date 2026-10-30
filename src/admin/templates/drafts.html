@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h3>提交档期草稿（仅登记，不触发锁定/签约）</h3>
+  <div id="msg"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+    <div><label>项目名称 *</label><input id="project_name"></div>
+    <div><label>场地 *</label><input id="venue" placeholder="主馆 Hall-A / 副馆 Hall-B / 多功能厅 Hall-C"></div>
+    <div><label>活动开始 *</label><input id="event_start" placeholder="2026-11-18 09:00"></div>
+    <div><label>活动结束 *</label><input id="event_end" placeholder="2026-11-20 17:00"></div>
+    <div><label>装卸口</label><input id="dock_no" placeholder="A / B / C / D / E"></div>
+    <div><label>进场开始</label><input id="load_in_start"></div>
+    <div><label>撤场结束</label><input id="load_out_end"></div>
+  </div>
+  <label>备注</label><textarea id="note" rows="2"></textarea>
+  <button class="btn btn-primary" style="margin-top:14px;" onclick="submitDraft()">保存草稿</button>
+</div>
+<div class="card">
+  <h3>我的草稿</h3>
+  <table id="tbl"><thead><tr><th>ID</th><th>项目</th><th>场地</th><th>活动起止</th><th>装卸口</th><th>状态</th><th>提交时间</th></tr></thead><tbody></tbody></table>
+</div>
+<script>
+async function submitDraft() {
+  const msg = document.getElementById('msg');
+  try {
+    const body = {}; ['project_name','venue','event_start','event_end','dock_no','load_in_start','load_out_end','note']
+      .forEach(k => body[k] = document.getElementById(k).value.trim());
+    const data = await api('/api/drafts', { method: 'POST', body: JSON.stringify(body) });
+    msg.innerHTML = `<div class="alert alert-ok">${esc(data.notice)}</div>`;
+    load();
+  } catch (e) { msg.innerHTML = `<div class="alert alert-error">${esc(e.message)}</div>`; }
+}
+async function load() {
+  const rows = await api('/api/drafts');
+  document.querySelector('#tbl tbody').innerHTML = rows.map(d => `<tr>
+    <td>${d.id}</td><td>${esc(d.project_name)}</td><td>${esc(d.venue)}</td>
+    <td>${esc(d.event_start)} ~ ${esc(d.event_end)}</td><td>${esc(d.dock_no) || '-'}</td>
+    <td><span class="badge badge-processing">${d.status}</span></td><td>${d.created_at}</td></tr>`).join('');
+}
+load();
+</script>
+{% endblock %}

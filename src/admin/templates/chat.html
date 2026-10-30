@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h3>档期问答（智能体仅输出冲突提示 / 缺项清单 / 来源位置）</h3>
+  <div id="chatBox" class="chat-box"></div>
+  <div style="display:flex;gap:10px;margin-top:14px;">
+    <input id="question" placeholder="例如：变更单 A001-02 与已确认档期 A001 有哪些冲突候选？" onkeydown="if(event.key==='Enter')send()">
+    <button class="btn btn-primary" onclick="send()">发送</button>
+  </div>
+  <p class="muted" style="margin-top:8px;">检索方式：BM25 + 向量混合 top3 · 每轮问答完整留痕，可供审计溯源</p>
+</div>
+<script>
+let sessionId = null;
+async function send() {
+  const input = document.getElementById('question');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+  const box = document.getElementById('chatBox');
+  box.insertAdjacentHTML('beforeend', `<div class="msg"><span class="q">${esc(q)}</span><div class="meta" id="pending">思考中…</div></div>`);
+  box.scrollTop = box.scrollHeight;
+  try {
+    const data = await api('/api/chat', { method: 'POST', body: JSON.stringify({ question: q, session_id: sessionId }) });
+    document.getElementById('pending')?.remove();
+    sessionId = data.session_id;
+    const cits = data.citations.map(c => `[来源${c.no}] ${c.source}#切片${c.chunk_no}(文档v${c.doc_version})`).join('；');
+    const retrieved = data.retrieved.map((r, i) =>
+      `[来源${i + 1}] ${r.source}（文档v${r.doc_version}）/切片#${r.chunk_no}\n${r.content}`).join('\n\n');
+    box.insertAdjacentHTML('beforeend', `
+      <div class="msg">
+        <div class="a">${esc(data.answer)}</div>
+        <div class="a" style="color:#a32d2d;border-color:#f7c1c1;">${esc(data.footer)}</div>
+        <div class="meta">引用：${esc(cits)}</div>
+        <details><summary>查看召回的知识库片段（审计留痕）</summary><pre>${esc(retrieved)}</pre></details>
+      </div>`);
+    box.scrollTop = box.scrollHeight;
+  } catch (e) {
+    document.getElementById('pending')?.remove();
+    box.insertAdjacentHTML('beforeend', `<div class="alert alert-error">${esc(e.message)}</div>`);
+  }
+}
+</script>
+{% endblock %}

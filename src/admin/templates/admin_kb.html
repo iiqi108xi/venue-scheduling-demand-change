@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h3>上传知识库文档（Markdown / PDF）</h3>
+  <p class="muted" style="margin-bottom:10px;">适用：场馆排期制度、场地规则、变更管理规范、版本交接要求、冲突判定标准。上传后自动切片 → 向量化 → 写入 FAISS。</p>
+  <div id="msg"></div>
+  <div class="toolbar">
+    <input type="file" id="file" accept=".md,.markdown,.pdf">
+    <button class="btn btn-primary" onclick="upload()">上传并入库</button>
+  </div>
+</div>
+<div class="card">
+  <h3>文档列表</h3>
+  <table id="tbl"><thead><tr><th>文件名</th><th>类型</th><th>上传时间</th><th>上传人</th><th>切片数</th><th>入库状态</th><th>操作</th></tr></thead><tbody></tbody></table>
+</div>
+<script>
+async function load() {
+  const rows = await api('/api/kb/documents');
+  const badge = s => `<span class="badge badge-${s}">${({ready:'已入库',processing:'处理中',failed:'失败'})[s] || s}</span>`;
+  document.querySelector('#tbl tbody').innerHTML = rows.map(d => `<tr>
+    <td>${esc(d.filename)}</td><td>${esc(d.doc_type)}</td><td>${d.created_at}</td><td>${esc(d.uploaded_by)}</td>
+    <td>${d.chunk_count}</td><td>${badge(d.status)}</td>
+    <td><button class="btn btn-sm btn-danger" onclick="del(${d.id}, this)">删除</button></td></tr>`).join('')
+    || '<tr><td colspan="7" class="muted">暂无文档</td></tr>';
+}
+async function upload() {
+  const msg = document.getElementById('msg');
+  const f = document.getElementById('file').files[0];
+  if (!f) { msg.innerHTML = '<div class="alert alert-error">请先选择文件</div>'; return; }
+  msg.innerHTML = '<div class="alert alert-info">上传中，正在切片并向量化…</div>';
+  const fd = new FormData(); fd.append('file', f);
+  try {
+    const resp = await fetch('/api/kb/documents', { method: 'POST', body: fd });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || '上传失败');
+    msg.innerHTML = `<div class="alert alert-ok">入库成功：${esc(data.filename)}，共 ${data.chunk_count} 个切片</div>`;
+    load();
+  } catch (e) { msg.innerHTML = `<div class="alert alert-error">${esc(e.message)}</div>`; }
+}
+async function del(id, btn) {
+  if (!confirm('确认删除该文档？将同步删除向量库对应数据。')) return;
+  try { await api('/api/kb/documents/' + id, { method: 'DELETE' }); load(); }
+  catch (e) { alert(e.message); }
+}
+load();
+</script>
+{% endblock %}
