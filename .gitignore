@@ -62,3 +62,6 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# 本地向量缓存
+.vector_cache.npz

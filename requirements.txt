@@ -1,7 +1,8 @@
 # Core dependencies
-# Add your project dependencies here, e.g.:
-# requests>=2.31.0
-# pyyaml>=6.0
+requests>=2.31.0          # LLM / Embedding HTTP 调用（OpenAI 兼容协议）
+numpy>=1.26.0             # 向量计算
+faiss-cpu>=1.8.0          # 向量检索（缺失时脚本自动降级为 NumPy）
+rank_bm25>=0.2.2          # BM25 关键词检索
 
 # Development dependencies (optional, use requirements-dev.txt for a full dev setup)
 # pytest>=7.0.0
