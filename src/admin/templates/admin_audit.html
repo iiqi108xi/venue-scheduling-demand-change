@@ -45,9 +45,13 @@ async function full(id) {
   d.querySelector('h3').dataset.mid = m.id;
   const retrieved = m.retrieved.map(r =>
     `[来源] ${r.source}(文档v${r.doc_version})/切片#${r.chunk_no}\n${r.text}`).join('\n\n');
+  const traceBlock = m.mode === 'agent'
+    ? `<label>智能体工具调用轨迹（全量，含跳步拦截）</label><pre style="background:#f5f6f8;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px;">${esc(m.retrieved.map(t =>
+        `#${t.step} ${t.tool} [${t.status}]\n入参: ${JSON.stringify(t.args)}\n结果: ${JSON.stringify(t.result)}`).join('\n\n') || '（无）'}</pre>`
+    : `<label>召回的知识库片段（含文档版本）</label><pre style="background:#f5f6f8;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px;">${esc(retrieved) || '（无召回）'}</pre>`;
   document.getElementById('detailBody').innerHTML = `
-    <label>提问原文</label><pre style="background:#f5f6f8;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px;">${esc(m.question)}</pre>
-    <label>召回的知识库片段（含文档版本）</label><pre style="background:#f5f6f8;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px;">${esc(retrieved) || '（无召回）'}</pre>
+    <label>提问原文（模式：${m.mode === 'agent' ? '智能体' : '普通问答'}）</label><pre style="background:#f5f6f8;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px;">${esc(m.question)}</pre>
+    ${traceBlock}
     <label>大模型原始回答全文</label><pre style="background:#f5f6f8;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px;">${esc(m.llm_raw_answer)}</pre>
     <p class="muted">访问人：${esc(m.username)}　提示词模板版本：v${m.prompt_template_version}　记录时间：${m.created_at}
     ${m.flag_type ? `<br>风险标记：${FLAGS[m.flag_type]} · 原因：${esc(m.flag_reason)} · 操作人：${esc(m.flagged_by)} · ${m.flagged_at}` : ''}</p>`;

@@ -22,7 +22,7 @@
       {% endif %}
     </nav>
     <div class="role-tag">当前用户：{{ user.username }}
-      <span class="badge badge-{{ user.role }}">{{ '管理员' if user.role == 'admin' else '一线员工' }}</span><br>
+      <span class="badge badge-{{ user.role }}">{{ {'admin':'管理员','coordinator':'协调员','employee':'一线员工'}[user.role] }}</span><br>
       <a href="#" onclick="logout();return false;" style="color:#9ca3af;font-size:12px;">退出登录</a>
     </div>
   </aside>

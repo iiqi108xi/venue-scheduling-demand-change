@@ -289,6 +289,26 @@ def session_detail(sid: int, user: User = Depends(require_login), db: DbSession 
     }
 
 
+# ============================ 智能体（ReAct + 工具调用） ============================
+
+class AgentIn(BaseModel):
+    question: str
+    session_id: int | None = None
+    draft: dict | None = None  # 提供则触发 S4 草稿创建骨架（角色门禁见工具层）
+
+
+@api.post("/agent/run")
+def agent_run(body: AgentIn, user: User = Depends(require_login), db: DbSession = Depends(get_db)):
+    from agent import run_agent_turn
+
+    if not body.question.strip():
+        raise HTTPException(400, "问题不能为空")
+    try:
+        return run_agent_turn(user, body.question.strip(), body.draft, body.session_id, db)
+    except ValueError as e:
+        raise HTTPException(404, str(e)) from e
+
+
 # ============================ 审计（管理员专属） ============================
 
 @api.get("/admin/audit/sessions")
@@ -362,6 +382,7 @@ def audit_message_full(mid: int, _: User = Depends(require_admin), db: DbSession
         "retrieved": json.loads(m.retrieved_chunks),
         "llm_raw_answer": m.llm_raw_answer,
         "prompt_template_version": m.prompt_template_version,
+        "mode": m.mode,
         "flag_type": m.flag_type, "flag_reason": m.flag_reason,
         "flagged_by": m.flagged_by,
         "flagged_at": m.flagged_at.strftime("%Y-%m-%d %H:%M:%S") if m.flagged_at else None,
@@ -419,8 +440,8 @@ class UserIn(BaseModel):
 
 @api.post("/admin/users")
 def create_user(body: UserIn, _: User = Depends(require_admin), db: DbSession = Depends(get_db)):
-    if body.role not in ("employee", "admin"):
-        raise HTTPException(400, "角色只能是 employee 或 admin")
+    if body.role not in ("employee", "coordinator", "admin"):
+        raise HTTPException(400, "角色只能是 employee / coordinator / admin")
     if len(body.username) < 2 or len(body.password) < 6:
         raise HTTPException(400, "用户名至少 2 位，密码至少 6 位")
     if db.query(User).filter(User.username == body.username).count():

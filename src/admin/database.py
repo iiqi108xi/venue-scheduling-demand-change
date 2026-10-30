@@ -100,6 +100,7 @@ class ChatMessage(Base):
     retrieved_chunks: Mapped[str] = mapped_column(Text, default="[]")  # JSON：[{source,doc_id,doc_version,chunk_no,text}]
     llm_raw_answer: Mapped[str] = mapped_column(Text, default="")
     prompt_template_version: Mapped[int] = mapped_column(Integer, default=0)
+    mode: Mapped[str] = mapped_column(String(16), default="qa")  # qa=普通问答 / agent=智能体（含工具轨迹）
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now, index=True)
     # 风险标记（审计）
     flag_type: Mapped[str | None] = mapped_column(String(32), nullable=True)   # conflict_misjudge/overcommit/invalid_rule
@@ -126,15 +127,57 @@ class ScheduleDraft(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
 
 
+class ScheduleSlot(Base):
+    """已确认档期快照（冲突检测的判定基准）。confirmed 仅能由人工产生。"""
+    __tablename__ = "schedule_slots"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    request_no: Mapped[str] = mapped_column(String(64), index=True)
+    project_name: Mapped[str] = mapped_column(String(128))
+    venue: Mapped[str] = mapped_column(String(64))
+    event_start: Mapped[str] = mapped_column(String(32))
+    event_end: Mapped[str] = mapped_column(String(32))
+    dock_no: Mapped[str] = mapped_column(String(32), default="")
+    load_in_start: Mapped[str] = mapped_column(String(32), default="")
+    load_out_end: Mapped[str] = mapped_column(String(32), default="")
+    status: Mapped[str] = mapped_column(String(16), default="confirmed")
+    source: Mapped[str] = mapped_column(String(32), default="manual")
+
+
 def init_db() -> None:
-    """建表 + 种子数据（默认管理员/员工 + 默认提示词模板）。"""
+    """建表 + 种子数据（默认管理员/协调员/员工 + 默认提示词模板 + 演示确认档期）。"""
     from auth import hash_password  # noqa: PLC0415
 
     Base.metadata.create_all(engine)
+    _ensure_columns()
     with SessionLocal() as db:
-        if not db.query(User).count():
-            db.add(User(username="admin", password_hash=hash_password("admin123"), role="admin"))
-            db.add(User(username="staff", password_hash=hash_password("staff123"), role="employee"))
+        seed_users = [("admin", "admin123", "admin"), ("coord", "coord123", "coordinator"),
+                      ("staff", "staff123", "employee")]
+        existing = {u.username for u in db.query(User).all()}
+        for uname, pwd, role in seed_users:
+            if uname not in existing:
+                db.add(User(username=uname, password_hash=hash_password(pwd), role=role))
         if not db.query(PromptTemplate).count():
             db.add(PromptTemplate(version=1, content=DEFAULT_PROMPT, is_active=True, updated_by="system"))
+        if not db.query(ScheduleSlot).count():
+            db.add(ScheduleSlot(
+                request_no="A001", project_name="春季设备展", venue="主馆 Hall-A",
+                event_start="2026-11-18 09:00", event_end="2026-11-20 17:00",
+                dock_no="B", load_in_start="2026-11-16 08:00", load_out_end="2026-11-21 12:00",
+                source="演示种子数据"))
         db.commit()
+
+
+def _ensure_columns() -> None:
+    """SQLite 轻量迁移：为旧表补新增列。"""
+    from sqlalchemy import text
+
+    needed = {
+        "chat_messages": {"mode": "VARCHAR(16) DEFAULT 'qa'"},
+    }
+    with engine.connect() as conn:
+        for table, cols in needed.items():
+            existing = {row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))}
+            for col, ddl in cols.items():
+                if col not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}"))
+        conn.commit()

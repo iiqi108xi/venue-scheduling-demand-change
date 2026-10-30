@@ -6,7 +6,7 @@
   <div class="toolbar">
     <input id="nUser" placeholder="账号" style="width:150px;">
     <input id="nPass" placeholder="初始密码（≥6位）" style="width:170px;">
-    <select id="nRole" style="width:130px;"><option value="employee">一线员工</option><option value="admin">管理员</option></select>
+    <select id="nRole" style="width:150px;"><option value="employee">一线员工</option><option value="coordinator">项目协调员</option><option value="admin">管理员</option></select>
     <button class="btn btn-primary" onclick="createUser()">创建</button>
   </div>
 </div>
@@ -19,7 +19,7 @@ async function load() {
   const rows = await api('/api/admin/users');
   document.querySelector('#tbl tbody').innerHTML = rows.map(u => `<tr>
     <td>${u.id}</td><td>${esc(u.username)}</td>
-    <td><span class="badge badge-${u.role}">${u.role === 'admin' ? '管理员' : '一线员工'}</span></td>
+    <td><span class="badge badge-${u.role}">${({admin:'管理员',coordinator:'协调员',employee:'一线员工'})[u.role] || u.role}</span></td>
     <td>${u.is_active ? '<span class="badge badge-ready">启用</span>' : '<span class="badge badge-failed">停用</span>'}</td>
     <td>${u.created_at}</td>
     <td class="toolbar">

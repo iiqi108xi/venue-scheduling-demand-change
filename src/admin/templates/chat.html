@@ -1,37 +1,79 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card">
-  <h3>档期问答（智能体仅输出冲突提示 / 缺项清单 / 来源位置）</h3>
-  <div id="chatBox" class="chat-box"></div>
+  <h3>智能助手（普通问答 / 智能体模式）</h3>
+  <div class="toolbar" style="margin-bottom:10px;">
+    <select id="mode" style="width:150px;" onchange="toggleDraft()">
+      <option value="qa">普通问答（RAG）</option>
+      <option value="agent">智能体模式（ReAct + 工具）</option>
+    </select>
+    <span class="muted">智能体模式：填草稿参数即触发"草稿创建"骨架；留空则为口径咨询/冲突诊断</span>
+  </div>
+  <div id="draftPanel" style="display:none;background:#f9fafb;border:1px dashed #d1d5db;border-radius:8px;padding:12px;">
+    <p class="muted" style="margin-bottom:6px;">草稿参数（创建草稿技能仅协调员/管理员可用；草稿不生效，需人工复核）：</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px;">
+      <div><label>项目名称</label><input id="d_project" value="智能仓储对接会"></div>
+      <div><label>主办单位</label><input id="d_organizer" value="华辰会展"></div>
+      <div><label>场地</label><input id="d_venue" placeholder="主馆 Hall-A / 副馆 Hall-B"></div>
+      <div><label>装卸口</label><input id="d_dock" placeholder="A-E"></div>
+      <div><label>活动开始</label><input id="d_es" placeholder="2026-11-19 09:00"></div>
+      <div><label>活动结束</label><input id="d_ee" placeholder="2026-11-19 16:00"></div>
+      <div><label>进场开始</label><input id="d_li" placeholder="2026-11-19 06:00"></div>
+      <div><label>撤场结束</label><input id="d_lo" placeholder="2026-11-19 18:00"></div>
+    </div>
+  </div>
+  <div id="chatBox" class="chat-box" style="margin-top:12px;"></div>
   <div style="display:flex;gap:10px;margin-top:14px;">
-    <input id="question" placeholder="例如：变更单 A001-02 与已确认档期 A001 有哪些冲突候选？" onkeydown="if(event.key==='Enter')send()">
+    <input id="question" placeholder="例如：装卸口占用的判定口径是什么？" onkeydown="if(event.key==='Enter')send()">
     <button class="btn btn-primary" onclick="send()">发送</button>
   </div>
-  <p class="muted" style="margin-top:8px;">检索方式：BM25 + 向量混合 top3 · 每轮问答完整留痕，可供审计溯源</p>
 </div>
 <script>
 let sessionId = null;
+function toggleDraft() {
+  document.getElementById('draftPanel').style.display =
+    document.getElementById('mode').value === 'agent' ? 'block' : 'none';
+}
+function collectDraft() {
+  const g = id => document.getElementById(id).value.trim();
+  const d = { project_name: g('d_project'), organizer: g('d_organizer'), venue: g('d_venue'),
+    event_start: g('d_es'), event_end: g('d_ee'), dock_no: g('d_dock'),
+    load_in_start: g('d_li'), load_out_end: g('d_lo') };
+  return Object.values(d).some(v => v) ? d : null;
+}
 async function send() {
   const input = document.getElementById('question');
+  const mode = document.getElementById('mode').value;
   const q = input.value.trim();
   if (!q) return;
   input.value = '';
   const box = document.getElementById('chatBox');
-  box.insertAdjacentHTML('beforeend', `<div class="msg"><span class="q">${esc(q)}</span><div class="meta" id="pending">思考中…</div></div>`);
+  box.insertAdjacentHTML('beforeend', `<div class="msg"><span class="q">[${mode === 'agent' ? '智能体' : '问答'}] ${esc(q)}</span><div class="meta" id="pending">思考中…</div></div>`);
   box.scrollTop = box.scrollHeight;
   try {
-    const data = await api('/api/chat', { method: 'POST', body: JSON.stringify({ question: q, session_id: sessionId }) });
+    let data, traceHtml = '';
+    if (mode === 'agent') {
+      data = await api('/api/agent/run', { method: 'POST',
+        body: JSON.stringify({ question: q, session_id: sessionId, draft: collectDraft() }) });
+      const steps = data.trace.map(t => {
+        const badge = t.status === 'ok' ? '<span class="badge badge-ready">通过</span>'
+          : t.status === 'denied' ? '<span class="badge badge-risk">拒绝</span>'
+          : t.status === 'skipped' ? '<span class="badge badge-risk">跳步拦截</span>'
+          : '<span class="badge badge-processing">阻断</span>';
+        return `#${t.step} ${esc(t.tool)} ${badge}\n入参: ${esc(JSON.stringify(t.args))}\n结果: ${esc(JSON.stringify(t.result))}`;
+      }).join('\n\n');
+      traceHtml = `<details><summary>工具调用轨迹（${data.trace.length} 步，全量留痕）</summary><pre>${steps}</pre></details>`
+        + (data.draft_id ? `<div class="meta">已创建草稿 id=${data.draft_id}（可在"档期草稿"页查看，状态待复核）</div>` : '');
+    } else {
+      data = await api('/api/chat', { method: 'POST', body: JSON.stringify({ question: q, session_id: sessionId }) });
+    }
     document.getElementById('pending')?.remove();
     sessionId = data.session_id;
-    const cits = data.citations.map(c => `[来源${c.no}] ${c.source}#切片${c.chunk_no}(文档v${c.doc_version})`).join('；');
-    const retrieved = data.retrieved.map((r, i) =>
-      `[来源${i + 1}] ${r.source}（文档v${r.doc_version}）/切片#${r.chunk_no}\n${r.content}`).join('\n\n');
     box.insertAdjacentHTML('beforeend', `
       <div class="msg">
         <div class="a">${esc(data.answer)}</div>
         <div class="a" style="color:#a32d2d;border-color:#f7c1c1;">${esc(data.footer)}</div>
-        <div class="meta">引用：${esc(cits)}</div>
-        <details><summary>查看召回的知识库片段（审计留痕）</summary><pre>${esc(retrieved)}</pre></details>
+        ${traceHtml}
       </div>`);
     box.scrollTop = box.scrollHeight;
   } catch (e) {
