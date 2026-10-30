@@ -127,6 +127,52 @@ class ScheduleDraft(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
 
 
+class AgentRunLog(Base):
+    """Agent 决策日志表（提示词7 · 第2项）：每轮/每步工具调用全量留痕。
+
+    用途：阶段 5 的轨迹分析——统计各工具调用频次、耗时分布、被拦截的跳步比例、
+    中断等待确认时长等。一行 = 一次工具调用（含被拒绝/中断的调用）。
+    """
+    __tablename__ = "agent_run_logs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(32), index=True)          # 一次智能体回合的唯一标识
+    session_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    message_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    round_no: Mapped[int] = mapped_column(Integer, default=0)            # 第几轮模型决策（1 起）
+    step: Mapped[int] = mapped_column(Integer, default=0)                # run 内全局步号（跨轮递增）
+    tool_name: Mapped[str] = mapped_column(String(64))                   # 工具名
+    arguments: Mapped[str] = mapped_column(Text, default="{}")           # 入参 JSON（超长截断）
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0)         # 执行耗时（毫秒）
+    status: Mapped[str] = mapped_column(String(24), default="ok")        # ok/blocked/denied/error/pending_confirm/rejected/confirmed
+    result_summary: Mapped[str] = mapped_column(Text, default="")        # 结果摘要（JSON，≤500 字符）
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now, index=True)
+
+
+class AgentConfirmation(Base):
+    """人工确认单（提示词7 · 第3项）：create_schedule_draft 执行前的强制中断记录。
+
+    生命周期：pending（中断挂起）→ confirmed / rejected / expired。
+    恢复执行时不复用中断前的 precheck_token，而是对草稿**重新**跑两道校验——
+    既保证凭据新鲜（HMAC 5 分钟有效期），也能捕获确认等待期间档期变化导致的
+    新冲突（等待窗口内他人确认了冲突档期，恢复时会重新检出并拒绝）。
+    """
+    __tablename__ = "agent_confirmations"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(32), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)   # 提交人（须与确认人一致）
+    username: Mapped[str] = mapped_column(String(64))
+    session_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    message_id: Mapped[int | None] = mapped_column(Integer, nullable=True)     # 中断时对应的问答留痕 id
+    draft: Mapped[str] = mapped_column(Text, default="{}")                     # 挂起的草稿内容 JSON（确认后不再可改）
+    question: Mapped[str] = mapped_column(Text, default="")                    # 触发中断的原始提问
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)  # pending/confirmed/rejected
+    draft_id: Mapped[int | None] = mapped_column(Integer, nullable=True)       # 确认后创建的草稿 id
+    decided_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    decided_at: Mapped[dt.datetime | None] = mapped_column(DateTime, nullable=True)
+    reject_reason: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
+
+
 class ScheduleSlot(Base):
     """已确认档期快照（冲突检测的判定基准）。confirmed 仅能由人工产生。"""
     __tablename__ = "schedule_slots"

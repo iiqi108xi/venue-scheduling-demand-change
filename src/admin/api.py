@@ -299,14 +299,87 @@ class AgentIn(BaseModel):
 
 @api.post("/agent/run")
 def agent_run(body: AgentIn, user: User = Depends(require_login), db: DbSession = Depends(get_db)):
-    from agent import run_agent_turn
+    from harness import run_harness_turn
 
     if not body.question.strip():
         raise HTTPException(400, "问题不能为空")
     try:
-        return run_agent_turn(user, body.question.strip(), body.draft, body.session_id, db)
+        return run_harness_turn(user, body.question.strip(), body.draft, body.session_id, db)
     except ValueError as e:
         raise HTTPException(404, str(e)) from e
+
+
+# ---------------------------------------------------------------------------
+# SSE 流式接口：每轮决策/工具执行/中断确认卡片以事件流推送到前端
+# （前端用 fetch + ReadableStream 逐事件渲染，草稿确认卡片在中断瞬间即出现）
+# ---------------------------------------------------------------------------
+
+@api.post("/agent/run/stream")
+def agent_run_stream(body: AgentIn, user: User = Depends(require_login), db: DbSession = Depends(get_db)):
+    import queue
+    import threading
+
+    from fastapi.responses import StreamingResponse
+
+    from harness import run_harness_turn
+
+    if not body.question.strip():
+        raise HTTPException(400, "问题不能为空")
+    events: queue.Queue = queue.Queue()
+    holder: dict = {}
+
+    def emit(ev: dict):
+        events.put(ev)
+
+    def worker():
+        """在工作线程里跑 Harness，事件通过队列实时外发（避免阻塞生成器）。"""
+        try:
+            holder["result"] = run_harness_turn(user, body.question.strip(), body.draft,
+                                                body.session_id, db, on_event=emit)
+        except Exception as e:                     # 异常也要走事件流告知前端
+            holder["error"] = str(e)
+        finally:
+            events.put({"type": "_done"})          # 哨兵：执行结束
+
+    def gen():
+        threading.Thread(target=worker, daemon=True).start()
+        # 1) 逐事件推送：轮次开始 / 工具执行（含耗时）/ 中断确认卡片
+        while True:
+            ev = events.get()
+            if ev.get("type") == "_done":
+                break
+            yield f"data: {json.dumps(ev, ensure_ascii=False)}\n\n"
+        # 2) 收尾：最终回答 + 全量轨迹（一次渲染，便于审计对照）
+        if "error" in holder:
+            yield f"data: {json.dumps({'type': 'error', 'detail': holder['error']}, ensure_ascii=False)}\n\n"
+        else:
+            r = holder["result"]
+            yield f"data: {json.dumps({'type': 'final', 'session_id': r['session_id'], 'message_id': r['message_id'], 'answer': r['answer'], 'trace': r['trace'], 'pending': r['pending'], 'footer': r['footer']}, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+# ---------------------------------------------------------------------------
+# 人工确认接口：create_schedule_draft 强制中断后的恢复入口
+# ---------------------------------------------------------------------------
+
+class ConfirmIn(BaseModel):
+    action: str  # confirm=确认创建 / reject=取消
+
+
+@api.post("/agent/confirm/{cid}")
+def agent_confirm(cid: int, body: ConfirmIn, user: User = Depends(require_login),
+                  db: DbSession = Depends(get_db)):
+    from harness import resume_confirmation
+
+    if body.action not in ("confirm", "reject"):
+        raise HTTPException(400, "action 只能是 confirm 或 reject")
+    try:
+        return resume_confirmation(user, cid, body.action, db)
+    except ValueError as e:
+        raise HTTPException(409, str(e)) from e
 
 
 # ============================ 审计（管理员专属） ============================
@@ -372,9 +445,14 @@ def unflag_message(mid: int, user: User = Depends(require_admin), db: DbSession 
 
 @api.get("/admin/audit/messages/{mid}/full")
 def audit_message_full(mid: int, _: User = Depends(require_admin), db: DbSession = Depends(get_db)):
+    from database import AgentRunLog
+
     m = db.query(ChatMessage).get(mid)
     if not m:
         raise HTTPException(404, "问答记录不存在")
+    # Agent 决策日志（阶段 5 轨迹分析原始数据：工具名/参数/耗时/结果摘要）
+    logs = db.query(AgentRunLog).filter(AgentRunLog.message_id == mid) \
+        .order_by(AgentRunLog.step).all()
     return {
         "id": m.id, "session_id": m.session_id, "username": m.session.username,
         "created_at": m.created_at.strftime("%Y-%m-%d %H:%M:%S"),
@@ -383,6 +461,12 @@ def audit_message_full(mid: int, _: User = Depends(require_admin), db: DbSession
         "llm_raw_answer": m.llm_raw_answer,
         "prompt_template_version": m.prompt_template_version,
         "mode": m.mode,
+        "run_logs": [{
+            "round": log.round_no, "step": log.step, "tool": log.tool_name,
+            "arguments": log.arguments, "duration_ms": log.duration_ms,
+            "status": log.status, "result_summary": log.result_summary,
+            "run_id": log.run_id,
+        } for log in logs],
         "flag_type": m.flag_type, "flag_reason": m.flag_reason,
         "flagged_by": m.flagged_by,
         "flagged_at": m.flagged_at.strftime("%Y-%m-%d %H:%M:%S") if m.flagged_at else None,
