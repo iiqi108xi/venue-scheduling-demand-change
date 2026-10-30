@@ -70,3 +70,7 @@ Thumbs.db
 src/admin/data/
 __pycache__/
 *.pyc
+
+# 评测运行时报告
+src/admin/eval/eval_report*.json
+eval_report*.json
