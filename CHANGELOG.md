@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-11-06
+
+### Added
+- 文档：`15-设计决策与答辩备忘`（八大设计决策问答、追问兜底口径、演示日检查清单），README 文档导航同步
+- 验证：干净环境重装依赖后实跑——单测 12/12 OK、plumbing 评测 30/30 PASS（端口 8501 实跑留痕）
+
 ## [1.3.0] - 2026-11-05
 
 ### Added
