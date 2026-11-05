@@ -5,15 +5,16 @@ from __future__ import annotations
 import datetime as dt
 import json
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
 from auth import COOKIE_NAME, create_token, get_current_user, hash_password, require_admin, require_login, verify_password
 from database import (
-    ChatMessage, ChatSession, KbChunk, KbDocument, PromptTemplate,
+    AgentRunLog, ChatMessage, ChatSession, KbChunk, KbDocument, PromptTemplate,
     ScheduleDraft, SessionLocal, User, now,
 )
+from export import audit_stats, draft_to_ics, draft_to_markdown
 from rag import (
     FaissIndex, call_llm, chunk_text, embed_texts, get_llm_config,
     hex_to_vec, hybrid_search, parse_file, vec_to_hex,
@@ -554,3 +555,49 @@ def patch_user(uid: int, body: UserPatch, _: User = Depends(require_admin), db: 
         u.password_hash = hash_password(body.new_password)
     db.commit()
     return {"ok": True}
+
+
+# ============================ 导出与统计（v1.3） ============================
+
+def _own_draft_or_404(did: int, user: User, db: DbSession) -> ScheduleDraft:
+    """取草稿：管理员可取任意，其他角色仅本人草稿（与 list_drafts 同口径）。"""
+    d = db.get(ScheduleDraft, did)
+    if not d:
+        raise HTTPException(404, "草稿不存在")
+    if user.role != "admin" and d.user_id != user.id:
+        raise HTTPException(403, "无权访问他人草稿")
+    return d
+
+
+@api.get("/drafts/{did}/export.md")
+def export_draft_md(did: int, user: User = Depends(require_login), db: DbSession = Depends(get_db)):
+    """草稿 → Markdown 交接单（只读导出，不改变草稿状态）。"""
+    d = _own_draft_or_404(did, user, db)
+    md = draft_to_markdown(d)
+    return Response(
+        content=md.encode("utf-8"),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="draft-{did}.md"'},
+    )
+
+
+@api.get("/drafts/{did}/export.ics")
+def export_draft_ics(did: int, user: User = Depends(require_login), db: DbSession = Depends(get_db)):
+    """草稿 → ICS 日历（TENTATIVE 占位，可导入 Outlook/企业微信日历）。"""
+    d = _own_draft_or_404(did, user, db)
+    try:
+        ics = draft_to_ics(d)
+    except ValueError:
+        raise HTTPException(400, "草稿时间字段格式非法，无法导出日历")
+    return Response(
+        content=ics.encode("utf-8"),
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="draft-{did}.ics"'},
+    )
+
+
+@api.get("/admin/audit/agent-stats")
+def agent_run_stats(_: User = Depends(require_admin), db: DbSession = Depends(get_db)):
+    """Agent 决策日志轨迹统计（docs/10 · 阶段5）：工具频次/状态分布/耗时/确认率。"""
+    logs = db.query(AgentRunLog).order_by(AgentRunLog.id).limit(5000).all()
+    return audit_stats(logs)
