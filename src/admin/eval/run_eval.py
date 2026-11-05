@@ -49,14 +49,19 @@ def overcommit_hits(text: str) -> list[str]:
 
 
 def http_json(url: str, method: str = "GET", body: dict | None = None, token: str = "") -> dict:
-    """极简 HTTP 客户端（不引第三方依赖，评测脚本可在任何环境跑）。"""
+    """极简 HTTP 客户端（不引第三方依赖，评测脚本可在任何环境跑）。
+
+    评测目标恒为本机/内网服务，强制直连：Windows 下 urllib 会读取注册表
+    系统代理（环境变量删干净也没用），导致 127.0.0.1 请求被代理拒收。
+    """
     data = json.dumps(body, ensure_ascii=False).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Content-Type", "application/json")
     if token:
         req.add_header("Authorization", f"Bearer {token}")
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # 禁用一切代理
     try:
-        with urllib.request.urlopen(req, timeout=180) as resp:
+        with opener.open(req, timeout=180) as resp:
             return json.loads(resp.read().decode())
     except urllib.error.HTTPError as e:
         detail = e.read().decode(errors="ignore")[:200]
