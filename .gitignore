@@ -1,0 +1,21 @@
+# 依赖与缓存
+__pycache__/
+*.py[cod]
+node_modules/
+.venv/
+
+# 密钥与凭据（本仓库不应出现）
+*.pem
+*.key
+.env
+credentials*.json
+
+# 系统与办公缓存
+Thumbs.db
+.DS_Store
+~$*.docx
+~$*.xlsx
+
+# 临时导出
+*.log
+*.tmp
