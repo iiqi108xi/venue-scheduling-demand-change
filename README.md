@@ -184,7 +184,7 @@ python -m unittest discover -s tests -v   # 12 条单元测试
 
 ### 课堂要求八件套（原始调研与文档交付物）
 
-老师课堂要求的 8 项原始交付物，是上述 docs/01–15 的**调研源头材料**：
+老师课堂要求的 8 项原始交付物，是上述 docs/01–15 的**调研源头材料**。逐项验收入口见 **[docs/00-验收索引.md](docs/00-验收索引.md)**（1→9 顺序 + 每项看点）。
 
 | # | 交付物 | 位置 |
 |---|--------|------|
@@ -196,6 +196,8 @@ python -m unittest discover -s tests -v   # 12 条单元测试
 | 6 | 需求分析方案 / 需求定义文档（痛点 PL、AI 改造优先级、追溯矩阵、验收 AC-1～8） | [docs/6_需求定义文档.docx](docs/6_需求定义文档.docx) |
 | 7 | 详细项目设计方案（架构 / 模块 M1～M6 / 技术选型 / 试点计划） | [docs/7_详细项目设计方案.docx](docs/7_详细项目设计方案.docx) |
 | 8 | 三档报价 + 投入产出测算（商业论证链：报价及范围→月运行成本→采用率/兑现假设→首年净收益/ROI/回本期→待验证假设 A-1～6） | [docs/8_报价与投入产出测算.docx](docs/8_报价与投入产出测算.docx) |
+| 9 | 项目上线交付运行手册（部署 / 账号 / 备份 / 故障 / 回退） | [docs/9-上线交付运行手册.docx](docs/9-上线交付运行手册.docx) |
+| — | 数据库（SQLite 演示库：10 张表 + 种子数据 + 知识库 24 切片） | [data/venue_scheduling.db](data/venue_scheduling.db) · [data/README.md](data/README.md) |
 
 交互版浏览器演示：[examples/场馆排期-六角色现状流程图.html](examples/场馆排期-六角色现状流程图.html) · [examples/数智化方案与报价单.html](examples/数智化方案与报价单.html)
 

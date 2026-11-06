@@ -54,6 +54,8 @@ data/*.csv
 data/*.xlsx
 data/*.json
 !data/*.sample.*
+# 交付用 SQLite 演示库（需随仓库提交，供评审直接核对）
+!data/*.db
 
 # Logs
 *.log
