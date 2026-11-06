@@ -237,7 +237,11 @@ def t_get_schedule(db: DbSession, venue: str = "", date_range: str = "", request
         if date_range and "~" in date_range:
             ds, de = date_range.split("~", 1)
             ss, se = parse_dt(s.event_start), parse_dt(s.event_end)
-            b1, b2 = parse_dt(ds.strip()), parse_dt(de.strip()) if parse_dt(de.strip()) else dt.datetime.max
+            # 查询范围任一端非法/缺失时退化为"不限"：宁可多返回让人工判断，也不能因 None 比较抛 500
+            b1 = parse_dt(ds.strip()) or dt.datetime.min
+            b2 = parse_dt(de.strip()) or dt.datetime.max
+            if b1 > b2:                      # 起止倒置同样退化为不限，避免静默返回空集误导判断
+                b1, b2 = dt.datetime.min, dt.datetime.max
             if ss and se and not (ss <= b2 and se >= b1):
                 continue
         out.append({"request_no": s.request_no, "project_name": s.project_name, "venue": s.venue,

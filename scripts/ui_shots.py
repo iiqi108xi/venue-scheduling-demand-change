@@ -3,7 +3,7 @@
 import time
 from playwright.sync_api import sync_playwright
 
-BASE = "http://127.0.0.1:8500"
+BASE = "http://127.0.0.1:8511"
 OUT = r"D:/projects/venue-scheduling-demand-change/assets/test-shots"
 import os; os.makedirs(OUT, exist_ok=True)
 
@@ -26,9 +26,10 @@ with sync_playwright() as p:
     login(pg, "admin", "admin123")
     pg.goto(BASE + "/chat"); pg.wait_for_load_state("networkidle")
     pg.select_option("#mode", "agent")
+    pg.fill("#d_project", "春季设备展"); pg.fill("#d_organizer", "东浩会展")
     pg.fill("#d_venue", "副馆 Hall-B"); pg.fill("#d_dock", "D12")
-    pg.fill("#d_es", "2026-12-01 09:00"); pg.fill("#d_ee", "2026-12-03 17:00")
-    pg.fill("#d_li", "2026-11-30 08:00"); pg.fill("#d_lo", "2026-12-04 12:00")
+    pg.fill("#d_es", "2027-03-01 09:00"); pg.fill("#d_ee", "2027-03-03 17:00")
+    pg.fill("#d_li", "2027-02-28 08:00"); pg.fill("#d_lo", "2027-03-04 12:00")
     pg.fill("#question", "申请为春季设备展新增副馆档期")
     pg.click("button.btn-primary")
     try:
@@ -67,9 +68,10 @@ with sync_playwright() as p:
     login(pg2, "staff", "staff123")
     pg2.goto(BASE + "/chat"); pg2.wait_for_load_state("networkidle")
     pg2.select_option("#mode", "agent")
+    pg2.fill("#d_project", "春季设备展"); pg2.fill("#d_organizer", "东浩会展")
     pg2.fill("#d_venue", "副馆 Hall-B"); pg2.fill("#d_dock", "D12")
-    pg2.fill("#d_es", "2026-12-01 09:00"); pg2.fill("#d_ee", "2026-12-03 17:00")
-    pg2.fill("#d_li", "2026-11-30 08:00"); pg2.fill("#d_lo", "2026-12-04 12:00")
+    pg2.fill("#d_es", "2027-03-01 09:00"); pg2.fill("#d_ee", "2027-03-03 17:00")
+    pg2.fill("#d_li", "2027-02-28 08:00"); pg2.fill("#d_lo", "2027-03-04 12:00")
     pg2.fill("#question", "申请为春季设备展新增副馆档期")
     pg2.click("button.btn-primary")
     time.sleep(3)
