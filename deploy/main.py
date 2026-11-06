@@ -49,3 +49,9 @@ def RedirectError(location: str):
     from fastapi.responses import RedirectResponse
 
     return RedirectResponse(location, status_code=302)
+
+
+if __name__ == "__main__":
+    import os
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", "8500")))
