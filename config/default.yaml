@@ -1,0 +1,37 @@
+# Default configuration for venue-scheduling-demand-change
+# Copy this file and override values for different environments.
+
+app:
+  name: venue-scheduling-demand-change
+  version: "0.1.0"
+  log_level: INFO
+
+scheduling:
+  # Default time window settings (minutes)
+  default_setup_duration: 60
+  default_teardown_duration: 60
+  # Buffer between consecutive events at the same venue (minutes)
+  buffer_minutes: 30
+
+data_sources:
+  service_desk:
+    type: readonly
+    endpoint: ""
+  business_ledger:
+    type: readonly
+    endpoint: ""
+  file_repository:
+    type: readonly
+    endpoint: ""
+
+privacy:
+  # Field-level desensitization toggle
+  desensitize: true
+  sensitive_fields:
+    - customer_name
+    - contract_amount
+    - contact_info
+
+audit:
+  retention_days: 365
+  log_access: true

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h3>欢迎使用</h3>
+  <p>当前角色：<span class="badge badge-{{ user.role }}">{{ '管理员' if user.role == 'admin' else '一线员工' }}</span>
+  {{ user.username }}</p>
+  <p class="muted" style="margin-top:10px;">
+    {% if user.role == 'admin' %}你可使用左侧全部管理功能：知识库、提示词模板、对话审计、用户管理。
+    {% else %}你可使用：档期问答、提交档期草稿、查看自己的问答记录（只读）。{% endif %}
+  </p>
+  <p class="muted" style="margin-top:10px;">系统硬约束：智能体仅输出冲突提示与缺项清单；不自动锁档、不签约、不对外承诺容量；所有业务结论必须人工复核确认。</p>
+</div>
+{% endblock %}
