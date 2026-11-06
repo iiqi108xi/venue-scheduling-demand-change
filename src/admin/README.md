@@ -29,4 +29,4 @@ LLM 供应商：环境变量 `LLM_PROVIDER`（默认 mock 离线可跑，详见 
 - `create_schedule_draft` **强制中断**：草稿内容经 SSE 推送给员工，确认后才执行；恢复时重新跑
   缺项与冲突校验（捕获等待窗口内的档期变化）
 - 接口：`POST /api/agent/run`、`POST /api/agent/run/stream`（SSE）、`POST /api/agent/confirm/{id}`
-- 设计说明与三条典型轨迹见 `docs/10-Agent执行循环与轨迹示例.md`
+- 设计说明与三条典型轨迹见 `docs/_附录-项目原始文档（01-15）/10-Agent执行循环与轨迹示例.md`

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-11-06
+
+### Changed（按老师清单重排 docs 目录）
+- `docs/` 改为**编号文件夹**，目录名即老师要求的序号，打开即可 1→9 逐项验收：
+  - `1-六人访谈记录/`：六人访谈记录 .md / .json / .csv（三格式同源）
+  - `2-项目基本简报/`：1-客户简报 / 2-现状信息请求表 / 3-业务发现访谈问题库 / 4-利益相关者资料与分工（4 个 HTML）+ 同名 zip（对应“下载并解压缩”）
+  - `3-典型事件采访/`：采访记录-顾明岚（原始对话）.txt + 采访记录整理-顾明岚（AI整理版）.docx
+  - `4-行业分析/`：行业分析文档 .md / .docx
+  - `5-两份流程图/`：流程图-改造前.png / 流程图-改造后.png（另附两个可交互 HTML，从 examples/ 移入）
+  - `6-需求定义与需求分析方案/`、`7-详细项目设计方案/`、`8-报价与投入产出测算/`、`9-上线交付运行手册/`：各 1 份 docx
+- 原 `docs/01–15` 技术底稿移入 `docs/_附录-项目原始文档（01-15）/`；16 场景测试方案与 17 上线地址移入 `docs/_附录-测试方案与部署地址/`，docs 根目录只留九项 + 两个附录
+- 重写 `docs/00-验收索引.md`：新增目录树、按序号的总览表与逐项看点
+- 同步修正引用路径：`README.md` 文档导航、`scripts/init_db.py`（简报目录 → `docs/2-项目基本简报/*.html`）、`data/README.md`、`src/admin/README.md`、16/17 附录文档
+
+### Verified
+- `scripts/init_db.py` 重跑通过：6 篇文档 / 25 切片 / 204KB，知识库检索正常
+- 9 个编号目录内 docx 全部用 python-docx 解析通过（段落 + 表格数正常）
+
 ## [1.5.1] - 2026-11-06
 
 ### Fixed（线上实测问题）
