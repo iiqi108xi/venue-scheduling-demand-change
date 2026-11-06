@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2026-11-06
+
+### Added（src 按老师清单编号）
+- `src/1-问答助手归档/`：对话归档.md（32 条会话实录）、chat_messages.json、agent_run_logs.json（65 条工具轨迹）、问答/历史/审计 3 张截图、README
+- `src/2-MVP项目/README.md`：工程架构、Agent 框架（6 工具·5 轮循环）、RAG 知识库、4 处人工确认点、3 角色接口级 RBAC，附代码行号与实测证据
+- `scripts/collect_qa_archive.py`、`scripts/build_qa_archive.py`：归档采集与再生成脚本
+
+### Fixed
+- 测试执行器 N1 登录改用管理员会话本身（此前 token 取自匿名会话，线上网关覆盖 Authorization 后全部 401）
+- 修复版覆盖发布至分享链接（链接不变），线上 26/26 用例回归通过，D-01 缺陷线上验证不再 500
+
+## [1.6.1] - 2026-11-06
+
+### Fixed
+- D-01：`t_get_schedule` 对非法时间范围（parse_dt 返回 None）缺保护导致 500，改为退化为不限范围并给出缺项提示；补回归单测
+
+### Added
+- `tests/test_agent_core.py` 18 条单元测试；`scripts/run_scenario_tests.py` 26 条接口级场景用例执行器
+- `Test/` 三件套：00 场景测试方案（md+docx）、01–05 可视化过程（34 图）、06 上线地址（md+docx）
+
 ## [1.6.0] - 2026-11-06
 
 ### Changed（按老师清单重排 docs 目录）

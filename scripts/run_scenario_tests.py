@@ -87,7 +87,7 @@ def assert_extra(rec, cond, why):
 
 # ---------------- 正常场景 N1~N6 ----------------
 run("N0", "正常", "分享链接进入登录页", "GET", "/login", 200)
-r = run("N1", "正常", "管理员登录", "POST", "/api/auth/login", 200,
+r = run("N1", "正常", "管理员登录", "POST", "/api/auth/login", 200, ADMIN,
         json={"username": "admin", "password": "admin123"})
 tok = (r["resp"] or {}).get("token")
 HA = {"Authorization": "Bearer " + tok} if tok else {}
