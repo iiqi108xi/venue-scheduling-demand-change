@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.1] - 2026-11-06
 
+### Fixed（线上实测问题）
+- 托管网关会注入自己的 `Authorization` 头，导致登录令牌被顶掉、接口恒返回 401：鉴权改为「Bearer 与 HttpOnly Cookie 双通道依次尝试」，任一有效即放行
+- JWT 密钥不再用 `secrets.token_hex()` 随机生成（多 worker/重启后令牌立即失效），改为固定演示密钥，并支持 `JWT_SECRET` 环境变量覆盖
+- 登录接口由服务端下发 HttpOnly Cookie，不再依赖前端 JS 写 Cookie
+- 线上复测：`staff/staff123` 登录 200 → 提问「版本有效性怎么判断」200，返回 3 条知识库来源（含《场地使用规则与交接规范》切片#2）
+
 ### Added
 - **data 数据库入库**：`data/venue_scheduling.db`（SQLite，10 张表，users 3 / kb_documents 6 / kb_chunks 25 / prompt_templates 1 / schedule_slots 3），随仓库提交，评审无需运行代码即可核对数据模型
 - `scripts/init_db.py`：一键重建交付库（建表 + 种子账号/提示词/档期 + 知识库切片向量化），制度文件按「条」切片，引用可落到具体条款

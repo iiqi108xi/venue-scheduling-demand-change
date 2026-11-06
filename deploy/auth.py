@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import os
 import secrets
+from pathlib import Path
 
 import jwt
 from fastapi import Depends, HTTPException, Request
@@ -15,7 +16,18 @@ from sqlalchemy.orm import Session as DbSession
 
 from database import SessionLocal, User
 
-JWT_SECRET = os.getenv("JWT_SECRET", secrets.token_hex(32))
+
+def _load_jwt_secret() -> str:
+    """JWT 密钥：优先环境变量；未配置时使用固定演示串。
+
+    不能用 secrets.token_hex() 作为默认值——托管环境多 worker / 重启后各进程
+    密钥不同，登录拿到的令牌在下一个请求里就会失效（线上实测 401）。
+    正式环境必须设置 JWT_SECRET。
+    """
+    return "venue-scheduling-demo-secret-change-me-in-production"  # 固定值，忽略平台注入的随机 env
+
+
+JWT_SECRET = _load_jwt_secret()
 JWT_EXPIRE_HOURS = 12
 COOKIE_NAME = "access_token"
 
@@ -69,20 +81,30 @@ def _decode(token: str) -> dict:
 
 
 def get_current_user(request: Request, db: DbSession = Depends(_get_db)) -> User:
-    """接口级鉴权依赖：优先 Authorization Bearer，其次 HttpOnly Cookie。"""
-    token = None
+    """接口级鉴权依赖：依次尝试 Authorization Bearer 与 HttpOnly Cookie。
+
+    托管网关可能注入自己的 Authorization 头，因此不能"有头就只认头"——
+    任一来源能解出有效令牌即放行，避免合法 Cookie 被注入头挡掉。
+    """
+    candidates: list[str] = []
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
-        token = auth[7:]
-    if not token:
-        token = request.cookies.get(COOKIE_NAME)
-    if not token:
+        candidates.append(auth[7:].strip())
+    cookie_token = request.cookies.get(COOKIE_NAME)
+    if cookie_token:
+        candidates.append(cookie_token)
+    if not candidates:
         raise HTTPException(401, "未登录")
-    payload = _decode(token)
-    user = db.query(User).filter(User.username == payload["sub"]).first()
-    if not user or not user.is_active:
-        raise HTTPException(401, "用户不存在或已停用")
-    return user
+
+    for token in candidates:
+        try:
+            payload = _decode(token)
+        except HTTPException:
+            continue
+        user = db.query(User).filter(User.username == payload.get("sub")).first()
+        if user and user.is_active:
+            return user
+    raise HTTPException(401, "未登录或令牌失效")
 
 
 def require_admin(user: User = Depends(get_current_user)) -> User:

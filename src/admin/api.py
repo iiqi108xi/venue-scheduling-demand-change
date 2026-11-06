@@ -5,11 +5,11 @@ from __future__ import annotations
 import datetime as dt
 import json
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from auth import COOKIE_NAME, create_token, get_current_user, hash_password, require_admin, require_login, verify_password
+from auth import COOKIE_NAME, JWT_EXPIRE_HOURS, create_token, get_current_user, hash_password, require_admin, require_login, verify_password
 from database import (
     AgentRunLog, ChatMessage, ChatSession, KbChunk, KbDocument, PromptTemplate,
     ScheduleDraft, SessionLocal, User, now,
@@ -50,11 +50,14 @@ class LoginIn(BaseModel):
 
 
 @api.post("/auth/login")
-def login(body: LoginIn, db: DbSession = Depends(get_db)):
+def login(body: LoginIn, response: Response, db: DbSession = Depends(get_db)):
     user = db.query(User).filter(User.username == body.username).first()
     if not user or not verify_password(body.password, user.password_hash) or not user.is_active:
         raise HTTPException(401, "账号或密码错误，或账号已停用")
     token = create_token(user)
+    # 服务端同时下发 HttpOnly Cookie，避免依赖前端 JS 写 Cookie（网关/浏览器策略下更稳）
+    response.set_cookie(COOKIE_NAME, token, max_age=JWT_EXPIRE_HOURS * 3600,
+                        httponly=True, samesite="lax", path="/")
     return {"token": token, "cookie_name": COOKIE_NAME, "role": user.role, "username": user.username}
 
 

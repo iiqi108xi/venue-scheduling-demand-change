@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import os
 from pathlib import Path
 
 from sqlalchemy import (
@@ -11,7 +12,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "data" / "admin.db"
+# 数据库位置可用环境变量 DB_PATH 覆盖：默认 runtime 库，交付演示库用 data/venue_scheduling.db
+DB_PATH = Path(os.getenv("DB_PATH") or (BASE_DIR / "data" / "admin.db"))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
