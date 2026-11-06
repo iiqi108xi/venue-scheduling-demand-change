@@ -8,15 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.5.1] - 2026-11-06
 
 ### Added
-- **data 数据库入库**：`data/venue_scheduling.db`（SQLite，10 张表，users 3 / kb_documents 5 / kb_chunks 24 / prompt_templates 1 / schedule_slots 3），随仓库提交，评审无需运行代码即可核对数据模型
+- **data 数据库入库**：`data/venue_scheduling.db`（SQLite，10 张表，users 3 / kb_documents 6 / kb_chunks 25 / prompt_templates 1 / schedule_slots 3），随仓库提交，评审无需运行代码即可核对数据模型
 - `scripts/init_db.py`：一键重建交付库（建表 + 种子账号/提示词/档期 + 知识库切片向量化），制度文件按「条」切片，引用可落到具体条款
-- `data/kb/01_场馆排期与变更管理制度.md`：合成制度文本（十条），用于 RAG 检索与引用演示
+- 知识库灌入仓库既有业务规范 `src/data/kb/场馆档期业务规范.md`、`场地使用规则与交接规范.md` 与四份项目简报
 - `data/README.md`：表结构、演示账号、重建方式、已验证结论
 - `docs/00-验收索引.md`：老师九项 docs 要求 1→9 逐项对照（文件路径 / 规模 / 看点 / 自查结果）
 - `database.py` 支持 `DB_PATH` 环境变量，可切换运行时库与交付库
 
 ### Fixed
-- 知识库此前为空导致问答走兜底：已灌入 5 篇文档共 24 个切片，实测「占档确认前核对哪三项」命中制度第 5 条并附来源
+- 知识库此前为空导致问答走兜底：已灌入 6 篇文档共 25 个切片，实测「装卸口冲突怎么判定」命中《场馆档期业务规范》§2.2 并附来源
 - `.gitignore` 增加 `!data/*.db` 例外，避免交付库被误排除
 
 ## [1.5.0] - 2026-11-06

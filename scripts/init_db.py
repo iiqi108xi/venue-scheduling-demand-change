@@ -4,7 +4,7 @@
 做四件事：
 1. 建表（与 src/admin/database.py 的 ORM 完全一致）
 2. 种子账号 admin / coord / staff、默认提示词模板、演示档期快照
-3. 把 data/kb/*.md 与 docs/briefing/*.html 切分、向量化后写入知识库表
+3. 把 src/data/kb/*.md（业务规范）与 docs/briefing/*.html（项目简报）切分、向量化后写入知识库表
 4. 打印表行数，便于验收核对
 
 用法：
@@ -52,6 +52,8 @@ def main() -> None:
     db_mod.init_db()
 
     sources: list[tuple[str, str, str]] = []  # (filename, doc_type, text)
+    for p in sorted((ROOT / "src" / "data" / "kb").glob("*.md")):
+        sources.append((p.name, "制度/规范", p.read_text(encoding="utf-8")))
     for p in sorted((ROOT / "data" / "kb").glob("*.md")):
         sources.append((p.name, "制度/规范", p.read_text(encoding="utf-8")))
     for p in sorted((ROOT / "docs" / "briefing").glob("*.html")):
