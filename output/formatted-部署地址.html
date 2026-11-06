@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="docx-page-size" content="A4">
+<title>上线部署网站地址</title>
+<style>
+:root{
+  --typography-fontSize-h1:16pt; --typography-fontSize-h3:12.5pt;
+  --typography-fontFamily-heading:"SimHei","黑体",sans-serif;
+  --fs-h1:var(--typography-fontSize-h1,16pt); --fs-h3:var(--typography-fontSize-h3,12.5pt); --fs-body:12pt; --fs-table:10.5pt;
+  --ff-heading:var(--typography-fontFamily-heading,"SimHei","黑体",sans-serif);
+  --ff-body:"SimSun","宋体",serif; --lh-body:1.7;
+  --color-primary:#1565C0; --color-heading:#1A237E; --color-text:#212121;
+  --color-textSecondary:#616161; --color-border:#E0E0E0; --color-bg:#FFFFFF; --color-surface:#F5F7FA;
+  --spacing-paragraph:0.6em; --spacing-section:1.8em; --spacing-block:0.9em;
+  --page-content-width:160mm;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--ff-body);font-size:var(--fs-body);line-height:var(--lh-body);color:var(--color-text);background:var(--color-bg);max-width:var(--page-content-width);margin:0 auto;padding:28px 30px}
+h1{font-size:var(--fs-h1);font-family:var(--ff-heading);font-weight:bold;color:var(--color-heading);border-left:4px solid var(--color-primary);padding-left:10px;margin:var(--spacing-section) 0 var(--spacing-block)}
+h3{font-size:var(--fs-h3);font-family:var(--ff-heading);font-weight:bold;margin:var(--spacing-block) 0 var(--spacing-paragraph)}
+p{margin-bottom:var(--spacing-paragraph)}
+p.bp{text-indent:2em}
+li{margin-bottom:0.4em}
+table.dt{border-collapse:collapse;width:100%;margin:0.6em 0 1.1em;font-size:var(--fs-table)}
+table.dt th,table.dt td{border:1px solid var(--color-border);padding:6px 10px;text-align:left;vertical-align:top}
+table.dt th{background:var(--color-surface);font-family:var(--ff-heading);font-weight:bold}
+.cover-eyebrow{font-size:12pt;color:var(--color-textSecondary);text-align:center;letter-spacing:2px}
+.cover-title{font-size:24pt;font-weight:bold;font-family:var(--ff-heading);color:var(--color-heading);text-align:center;margin:1.2em 0 0.5em}
+.cover-subtitle{font-size:14pt;color:var(--color-textSecondary);text-align:center;margin-bottom:2em}
+@page{@bottom-center{content:"第 " counter(page) " 页"}}
+@page cover{@bottom-center{content:none}}
+section[role="cover"]{page:cover}
+</style>
+</head>
+<body>
+<section role="cover">
+  <p class="cover-eyebrow">档期智能核对智能体系统 · 部署交付</p>
+  <p class="cover-title">上线部署网站地址</p>
+  <p class="cover-subtitle">场馆排期与需求变更 · MVP 系统公网部署</p>
+  <table class="dt" style="width:78%;margin:2.5em auto">
+    <tr><th style="width:30%">文档版本</th><td>V1.0（2026-11-06）</td></tr>
+    <tr><th>部署状态</th><td>已上线（部署即验证通过）</td></tr>
+    <tr><th>资料性质</th><td>课程作业 · 合成演练场景</td></tr>
+  </table>
+</section>
+<section role="body" data-page-restart="1">
+  <h1>一、访问地址</h1>
+  <table class="dt">
+    <tr><th style="width:26%">项</th><th>值</th></tr>
+    <tr><td><b>分享链接</b></td><td>https://venue-scheduling-agent.app.workbuddy.host/?sharecode=YCJ7OTYNZZ</td></tr>
+    <tr><td>应用名称</td><td>场馆排期智能核对系统</td></tr>
+    <tr><td>部署形态</td><td>HTTP 服务（Python / FastAPI / uvicorn，沙箱单端口）</td></tr>
+    <tr><td>部署目录</td><td>deploy/（仓库内干净部署副本，含 requirements.txt 与 run.py 入口）</td></tr>
+  </table>
+  <p class="bp">链接带 sharecode 门禁：必须使用上表完整链接访问，无 sharecode 的裸地址返回 403。</p>
+  <h1>二、演示账号</h1>
+  <table class="dt">
+    <tr><th style="width:18%">账号</th><th style="width:20%">密码</th><th style="width:20%">角色</th><th>可验证点</th></tr>
+    <tr><td>admin</td><td>admin123</td><td>管理员</td><td>知识库 / 审计 / 用户管理 / 草稿创建（触发强制中断）</td></tr>
+    <tr><td>staff</td><td>staff123</td><td>一线员工</td><td>问答 / 草稿确认；创建草稿会被角色门禁拒绝</td></tr>
+  </table>
+  <h1>三、上线验证记录（2026-11-06 实测）</h1>
+  <p>1. 分享链接访问 → 302 → 登录页 200（「登录 · 场馆档期排期智能体管理后台」）。2. POST /api/auth/login（staff）→ 200 + JWT 签发。3. 智能体模式提交预订草稿 → create_schedule_draft 强制中断生成确认单 → 人工确认后草稿创建（状态 draft 不生效）→ 提交人工复核。4. 权限验证：staff 调管理员接口 403；未登录 401。</p>
+  <h1>四、演示要点（5 分钟）</h1>
+  <p>1. <b>口径咨询</b>：知识库检索 + 引用作答 +「最终结论需人工复核确认」页脚。2. <b>预订全流程</b>：智能体模式填草稿参数 → 5 步工具轨迹 → 🛑 强制中断确认卡片 → 点击「确认创建」→ 草稿创建（不生效）→ 提交复核。3. <b>规则引擎拦截</b>：主馆时间重叠草稿 → 冲突检测阻断。4. <b>越权</b>：切 staff 重复步骤 2 → 角色门禁拒绝。5. <b>审计</b>：管理员查看对话审计（提问原文 / 工具轨迹 / 版本）。</p>
+  <h1>五、运维与回退</h1>
+  <p class="bp">详见《项目上线交付运行手册》（docs/9-上线交付运行手册.docx）：部署步骤、账号管理、备份、故障处理、回退方案。应用管理入口：WorkBuddy「设置—数据管理—应用」。系统为只读辅助层，停止服务即完成回退，对原业务零影响。</p>
+</section>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="docx-page-size" content="A4">
+<title>项目上线交付运行手册</title>
+<style>
+:root{
+  --typography-fontSize-h1:16pt; --typography-fontSize-h3:12.5pt;
+  --typography-fontFamily-heading:"SimHei","黑体",sans-serif;
+  --fs-h1:var(--typography-fontSize-h1,16pt); --fs-h3:var(--typography-fontSize-h3,12.5pt); --fs-body:12pt; --fs-table:10.5pt;
+  --ff-heading:var(--typography-fontFamily-heading,"SimHei","黑体",sans-serif);
+  --ff-body:"SimSun","宋体",serif; --lh-body:1.7;
+  --color-primary:#1565C0; --color-heading:#1A237E; --color-text:#212121;
+  --color-textSecondary:#616161; --color-border:#E0E0E0; --color-bg:#FFFFFF; --color-surface:#F5F7FA;
+  --spacing-paragraph:0.6em; --spacing-section:1.8em; --spacing-block:0.9em;
+  --page-content-width:160mm;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--ff-body);font-size:var(--fs-body);line-height:var(--lh-body);color:var(--color-text);background:var(--color-bg);max-width:var(--page-content-width);margin:0 auto;padding:28px 30px}
+h1{font-size:var(--fs-h1);font-family:var(--ff-heading);font-weight:bold;color:var(--color-heading);border-left:4px solid var(--color-primary);padding-left:10px;margin:var(--spacing-section) 0 var(--spacing-block)}
+h3{font-size:var(--fs-h3);font-family:var(--ff-heading);font-weight:bold;margin:var(--spacing-block) 0 var(--spacing-paragraph)}
+p{margin-bottom:var(--spacing-paragraph)}
+p.bp{text-indent:2em}
+li{margin-bottom:0.4em}
+table.dt{border-collapse:collapse;width:100%;margin:0.6em 0 1.1em;font-size:var(--fs-table)}
+table.dt th,table.dt td{border:1px solid var(--color-border);padding:6px 10px;text-align:left;vertical-align:top}
+table.dt th{background:var(--color-surface);font-family:var(--ff-heading);font-weight:bold}
+code{font-family:Consolas,monospace;background:var(--color-surface);padding:1px 5px;border-radius:3px;font-size:10.5pt}
+.cover-eyebrow{font-size:12pt;color:var(--color-textSecondary);text-align:center;letter-spacing:2px}
+.cover-title{font-size:24pt;font-weight:bold;font-family:var(--ff-heading);color:var(--color-heading);text-align:center;margin:1.2em 0 0.5em}
+.cover-subtitle{font-size:14pt;color:var(--color-textSecondary);text-align:center;margin-bottom:2em}
+@page{@bottom-center{content:"第 " counter(page) " 页"}}
+@page cover{@bottom-center{content:none}}
+section[role="cover"]{page:cover}
+</style>
+</head>
+<body>
+<section role="cover">
+  <p class="cover-eyebrow">档期智能核对智能体系统 · 交付运行</p>
+  <p class="cover-title">项目上线交付运行手册</p>
+  <p class="cover-subtitle">场馆排期与需求变更 · MVP 系统（src/admin）</p>
+  <table class="dt" style="width:78%;margin:2.5em auto">
+    <tr><th style="width:30%">文档版本</th><td>V1.0（2026-11-06）</td></tr>
+    <tr><th>适用范围</th><td>系统部署、日常运行、故障处理与回退</td></tr>
+    <tr><th>目标读者</th><td>部署运维人员、系统管理员、验收方</td></tr>
+    <tr><th>资料性质</th><td>课程作业 · 合成演练场景</td></tr>
+  </table>
+</section>
+<section role="body" data-page-restart="1">
+  <h1>一、系统概述</h1>
+  <p class="bp">本系统为「场馆档期申请只读核对助手」MVP：FastAPI + Jinja2 服务端渲染管理后台，内置 RAG 问答、规则引擎冲突检测、Agent 执行循环（Harness，最多 5 轮）、三处人工确认点（角色门禁、强制中断确认单、提交人工复核）、全量审计留痕与 RBAC 三角色权限。业务硬约束：只读归集、AI 只提示不写回、所有结论人工把关。</p>
+  <h3>1.1 组件清单</h3>
+  <table class="dt">
+    <tr><th style="width:26%">组件</th><th style="width:34%">位置</th><th>说明</th></tr>
+    <tr><td>管理后台（SSR）</td><td>src/admin（main.py 入口）</td><td>登录/问答/草稿/审计/知识库/用户管理</td></tr>
+    <tr><td>Agent 执行循环</td><td>src/admin/harness.py、agent.py</td><td>6 工具 Function Calling，强制中断</td></tr>
+    <tr><td>知识库与检索</td><td>src/admin/rag.py</td><td>BM25 + 向量混合检索，faiss 缺失自动降级</td></tr>
+    <tr><td>规则引擎</td><td>src/admin/tools.py</td><td>缺项校验、时间窗/装卸口冲突判定</td></tr>
+    <tr><td>数据存储</td><td>src/admin/data/admin.db</td><td>SQLite，含演示种子档期 A001</td></tr>
+    <tr><td>评测执行器</td><td>src/admin/eval/run_eval.py</td><td>plumbing 30 条 / semantic 语义判分</td></tr>
+  </table>
+  <h1>二、部署上线</h1>
+  <h3>2.1 环境要求</h3>
+  <p>1. Python ≥ 3.10（验证环境 3.13）；2. 内存 ≥ 512MB（无 GPU 要求）；3. 端口：默认 8123，Windows 下若落在 Hyper-V 保留段（netsh int ipv4 show excludedportrange protocol=tcp 可查）换任意空闲端口，代码无硬编码；4. 外网：可选——LLM_PROVIDER=mock 时完全离线可跑。</p>
+  <h3>2.2 部署步骤</h3>
+  <p>1. 获取代码：git clone https://github.com/iiqi108xi/venue-scheduling-demand-change.git</p>
+  <p>2. 安装依赖：<code>pip install -r requirements.txt</code></p>
+  <p>3. 启动服务：<code>cd src/admin && python -m uvicorn main:app --host 0.0.0.0 --port 8500</code></p>
+  <p>4. 验证：<code>curl http://127.0.0.1:8500/login</code> 返回 200；浏览器打开 <code>http://&lt;主机IP&gt;:8500/login</code></p>
+  <p>5. 冒烟：按 docs/13-演示操作手册 走通「口径咨询 → 预订流（强制中断）→ 确认创建」三步即视为部署成功。</p>
+  <h3>2.3 上线检查清单</h3>
+  <table class="dt">
+    <tr><th style="width:8%">序号</th><th style="width:52%">检查项</th><th>判定</th></tr>
+    <tr><td>1</td><td>登录页可达，admin/staff 双账号可登录</td><td>HTTP 200</td></tr>
+    <tr><td>2</td><td>单元测试 12/12、链路评测 30/30</td><td>全 PASS</td></tr>
+    <tr><td>3</td><td>预订流强制中断出现确认卡片，staff 被角色门禁拒绝</td><td>pending_confirm / denied</td></tr>
+    <tr><td>4</td><td>审计页可见提问原文、工具轨迹、页脚提示</td><td>记录完整</td></tr>
+    <tr><td>5</td><td>LLM_PROVIDER 已按生产配置（mock 仅演示用）</td><td>环境变量确认</td></tr>
+    <tr><td>6</td><td>admin.db 已纳入备份计划（见 3.3）</td><td>备份任务存在</td></tr>
+  </table>
+  <h1>三、日常运行</h1>
+  <h3>3.1 账号与角色</h3>
+  <table class="dt">
+    <tr><th style="width:22%">账号</th><th style="width:26%">角色</th><th>权限</th></tr>
+    <tr><td>admin / admin123</td><td>管理员</td><td>全部功能：知识库、提示词模板、审计、用户管理、草稿创建</td></tr>
+    <tr><td>staff / staff123</td><td>一线员工</td><td>问答、查询、草稿确认（不可创建草稿）</td></tr>
+    <tr><td>coordinator</td><td>项目流程协调员</td><td>可创建草稿（试点期由管理员代管）</td></tr>
+  </table>
+  <p class="bp">上线后第一件事：修改两个默认密码（管理员页面「用户管理」），并为真实经办人创建 coordinator 账号。</p>
+  <h3>3.2 服务管理</h3>
+  <p>1. 前台运行：<code>python -m uvicorn main:app --port 8500</code>；2. 生产建议：Windows 注册为计划任务 / NSSM 服务，或 Linux systemd 单元，崩溃自动拉起；3. 日志：uvicorn 标准输出 + <code>agent_run_logs</code> 表（每轮工具调用的参数/耗时/状态/结果摘要，结果摘要截断 500 字符防撑爆）。</p>
+  <h3>3.3 备份与数据管理</h3>
+  <p>1. 每日备份 <code>src/admin/data/admin.db</code>（单文件 SQLite，直接复制即可，建议保留 30 天滚动）；2. 知识库文档上传后切片入库，原始文件建议同目录归档；3. 审计数据只增不改，随库备份。</p>
+  <h1>四、故障处理</h1>
+  <table class="dt">
+    <tr><th style="width:26%">现象</th><th style="width:38%">排查</th><th>处置</th></tr>
+    <tr><td>端口启动失败（WinError）</td><td>netsh 查 Hyper-V 保留段</td><td>换端口启动，代码无硬编码</td></tr>
+    <tr><td>问答始终返回「未找到对应口径」</td><td>知识库为空或文档状态非 ready</td><td>/admin/kb 上传制度文档，等待状态 ready</td></tr>
+    <tr><td>LLM 调用超时/报错</td><td>LLM_PROVIDER / API Key 配置</td><td>临时切 mock 保业务可用（回答自动标注演示模式）</td></tr>
+    <tr><td>确认单无法确认（409）</td><td>状态机：confirmed 不可重复处理 / 30 分钟超时视为放弃</td><td>重新发起预订流程生成新确认单</td></tr>
+    <tr><td>检索质量下降</td><td>faiss 不可用已降级 NumPy</td><td>pip install faiss-cpu 恢复向量索引</td></tr>
+  </table>
+  <h1>五、回退方案</h1>
+  <p class="bp">1. 系统为只读辅助层，不写回业务系统——直接停止 uvicorn 进程即完成回退，原业务（服务台/台账/文件库）零影响；2. 数据回退：恢复 admin.db 备份文件后重启；3. 版本回退：git checkout 到上一发布 tag 重启；4. 回退后核对审计页最后一条记录时间，确认无未完成确认单悬挂。</p>
+  <h1>六、安全注意事项</h1>
+  <p>1. 生产必须改默认密码并启用 HTTPS（反向代理终止 TLS）；2. LLM_API_KEY 等凭据只放环境变量，不进代码库（.gitignore 已拦截 credentials*.json / .env）；3. 管理员页面（审计/用户/提示词模板）仅 admin 可达；4. 对话与工具轨迹全量留痕且只增不改，满足「谁查过、用哪个版本、谁确认」的可追溯要求。</p>
+  <h1>七、交付物索引</h1>
+  <table class="dt">
+    <tr><th style="width:34%">交付物</th><th>位置</th></tr>
+    <tr><td>部署地址文档</td><td>docs/17-上线部署网站地址.md / .docx</td></tr>
+    <tr><td>演示操作手册</td><td>docs/13-演示操作手册.md</td></tr>
+    <tr><td>场景测试方案与可视化过程</td><td>docs/16-*.md/.docx · Test/01～05.docx</td></tr>
+    <tr><td>页面与接口清单（RBAC 矩阵）</td><td>docs/08-管理后台页面与接口清单.md</td></tr>
+    <tr><td>设计决策与答辩备忘</td><td>docs/15-设计决策与答辩备忘.md</td></tr>
+  </table>
+</section>
+</body>
+</html>

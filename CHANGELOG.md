@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-11-06
+
+### Added
+- docs-9：`9-上线交付运行手册.docx`（部署/账号/备份/故障/回退）
+- Test-1：`16-场景测试方案-正常边界对抗权限故障.md/.docx`（23 条用例 100% PASS，量化判定）
+- Test-2：`Test/01～05-*.docx` 五份可视化场景测试过程（11 张接口证据渲染图 + 8 张真实 UI 截图，Playwright 取证）
+- Test-3：MVP 公网部署上线（FastAPI 沙箱单端口）+ `17-上线部署网站地址.md/.docx`（分享链接、演示账号、上线验证记录）
+- 部署入口 `deploy/run.py`（监听 PORT 环境变量绑定 0.0.0.0）与 `scripts/ui_shots.py`、`scripts/build_test_docx.py` 取证脚本
+- docs/14 提交材料清单增补「课堂要求 1–9 与 Test 三项对照」表
+
 ## [1.4.0] - 2026-11-06
 
 ### Added

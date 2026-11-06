@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h3>系统提示词模板（管理员专属）</h3>
+  <div id="msg"></div>
+  <p class="muted">当前生效版本：<b id="ver">-</b>　最后修改：<span id="meta">-</span></p>
+  <textarea id="content" rows="10" style="margin-top:10px;"></textarea>
+  <div class="toolbar" style="margin-top:12px;">
+    <button class="btn btn-primary" onclick="save()">保存（全站问答立即生效）</button>
+    <button class="btn btn-danger" onclick="reset()">恢复默认模板</button>
+  </div>
+  <p class="muted" style="margin-top:12px;">注：无论模板如何修改，系统都会在回答末尾强制追加"最终结论需要人工复核确认"，该底线不受模板编辑影响。</p>
+</div>
+<script>
+async function load() {
+  const t = await api('/api/prompt-template');
+  document.getElementById('content').value = t.content;
+  document.getElementById('ver').textContent = 'v' + t.version;
+  document.getElementById('meta').textContent = t.updated_at + ' by ' + t.updated_by;
+}
+async function save() {
+  const msg = document.getElementById('msg');
+  try {
+    const data = await api('/api/prompt-template', { method: 'PUT',
+      body: JSON.stringify({ content: document.getElementById('content').value }) });
+    msg.innerHTML = `<div class="alert alert-ok">已保存 ${esc(data.effective)}</div>`; load();
+  } catch (e) { msg.innerHTML = `<div class="alert alert-error">${esc(e.message)}</div>`; }
+}
+async function reset() {
+  if (!confirm('确认恢复默认模板？')) return;
+  await api('/api/prompt-template/reset', { method: 'POST' });
+  load();
+}
+load();
+</script>
+{% endblock %}
